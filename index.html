@@ -20,12 +20,17 @@ button{cursor:pointer;font-family:inherit;}input{font-family:inherit;}
 .box{border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.6;}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
 .modal{background:#131926;border:1px solid rgba(255,255,255,0.13);border-radius:18px;padding:24px;max-width:480px;width:100%;}
+/* mode badge */
+.mode-ok{background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.35);font-size:10px;padding:2px 7px;border-radius:8px;font-weight:700;flex-shrink:0;}
+.mode-warn{background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.35);font-size:10px;padding:2px 7px;border-radius:8px;font-weight:700;flex-shrink:0;}
+.mode-def{background:rgba(107,114,128,0.2);color:#9ca3af;border:1px solid rgba(107,114,128,0.3);font-size:10px;padding:2px 7px;border-radius:8px;font-weight:700;flex-shrink:0;}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <div id="mc"></div>
 <script>
+// ─── CARD CONFIG ─────────────────────────────────────────────
 const CARDS={
   starlux:{id:"starlux",short:"星宇卡",color:"#7eb8ff",bg:"rgba(126,184,255,0.1)",tag:"JX"},
   eva:    {id:"eva",    short:"長榮卡",color:"#4ade80",bg:"rgba(74,222,128,0.1)",  tag:"BR"},
@@ -34,46 +39,71 @@ const CARDS={
   unicard:{id:"unicard",short:"Unicard",color:"#a3e635",bg:"rgba(163,230,53,0.1)",tag:"UNI"},
   ricard: {id:"ricard",short:"Richart",color:"#fbbf24",bg:"rgba(251,191,36,0.1)", tag:"TSB"},
 };
-const R={
-  jx_20:  {id:"starlux",text:"20元/哩",score:4,note:"一般消費，入星宇COSMILE",method:"直刷"},
-  jx_10:  {id:"starlux",text:"10元/哩",score:8,note:"海外消費，入星宇COSMILE",method:"直刷"},
-  jx_sp:  {id:"starlux",text:"10元/哩×2",score:10,note:"指定通路雙倍，直入COSMILE",method:"官網/App"},
-  jx_none:{id:"starlux",text:"❌ 無哩程",score:0,note:"玉山官方排除（電信/水電/稅/超商/全聯）",method:"—"},
-  br_20:  {id:"eva",text:"20元/哩",score:4,note:"一般消費，入長榮Infinity",method:"直刷"},
-  br_10:  {id:"eva",text:"10元/哩",score:8,note:"海外指定消費",method:"直刷"},
-  br_sp:  {id:"eva",text:"10元/哩",score:10,note:"長榮指定通路，直入Infinity",method:"官網/App"},
-  br_exp: {id:"eva",text:"8元/哩",score:10,note:"Expedia訂房最優！",method:"Expedia"},
-  br_ins: {id:"eva",text:"❌ 保費排除",score:0,note:"長榮無限卡官方排除保費",method:"—"},
-  br_none:{id:"eva",text:"❌ 無哩程",score:0,note:"長榮排除此類消費",method:"—"},
-  ci_18:  {id:"ci",text:"18元/哩",score:4,note:"一般消費，入華夏帳戶",method:"直刷"},
-  ci_9:   {id:"ci",text:"9元/哩×2",score:10,note:"指定消費雙倍，入華夏帳戶",method:"直刷"},
-  ci_none:{id:"ci",text:"❌ 無哩程",score:0,note:"官方排除：電信/超商/全聯/水電/稅/公立醫療",method:"—"},
-  ci_now: {id:"ci",text:"18元/哩⚠",score:3,note:"2024/10後海外網購取消雙倍",method:"直刷"},
-  cb_003: {id:"cube",text:"0.3%",score:1,note:"未切換方案，基本回饋",method:"任意刷"},
-  cb_2:   {id:"cube",text:"2% 小樹點",score:6,note:"集精選（超商/全聯需實體或PX Pay）",method:"集精選"},
-  cb_3:   {id:"cube",text:"3% 小樹點",score:8,note:"玩數位（串流/網購）",method:"玩數位"},
-  cb_33:  {id:"cube",text:"3.3% 小樹點",score:8,note:"趣旅行（機票/訂房）或樂饗購（外送/百貨）",method:"切換方案"},
-  cb_eu:  {id:"cube",text:"3% 小樹點",score:8,note:"趣旅遊：明確含歐洲，不擋EU",method:"趣旅遊"},
-  cb_10:  {id:"cube",text:"最高10%",score:10,note:"慶生月+App領券，限指定通路",method:"慶生月+領券",warn:"⚠ 限生日月+須事先領券"},
-  cb_tel: {id:"cube",text:"0.3%（非指定）",score:1,note:"電信費不在任何常駐方案",method:"任意刷"},
-  cb_ins: {id:"cube",text:"領券1.2%/0.3%",score:2,note:"保費需App領券才1.2%（月限1000點）",method:"App領券"},
-  uni_none:{id:"unicard",text:"❌ 無回饋",score:0,note:"排除：超商/全聯/電信/水電/稅費",method:"—"},
-  uni_1:  {id:"unicard",text:"1%",score:2,note:"基本回饋（非百大通路）",method:"基本"},
-  uni_45: {id:"unicard",text:"4.5% e point",score:9,note:"UP選百大特店（可換哩）",method:"UP選"},
-  uni_lp: {id:"unicard",text:"4.5%（LINE Pay）",score:9,note:"非百大餐廳改用LINE Pay→行動支付類4.5%",method:"LINE Pay"},
-  uni_eu: {id:"unicard",text:"3.5%⚠",score:7,note:"部分歐盟國在百大，但一般回饋排除歐盟",method:"UP選",warn:"⚠ 歐盟排除一般1%回饋"},
-  ri_2:   {id:"ricard",text:"≈2%",score:5,note:"一般消費假日方案",method:"假日方案"},
-  ri_33:  {id:"ricard",text:"3.3%",score:8,note:"玩旅刷：指定20+航空/旅行社",method:"玩旅刷"},
-  ri_38:  {id:"ricard",text:"≈3.8%",score:8,note:"最高回饋方案",method:"切換方案"},
+
+// ─── FIXED STRATEGY (the one-time setup) ─────────────────────
+// default = the mode if user does nothing; target = what we recommend fixing to
+const STRATEGY={
+  cube:   {card:"cube",  target:"集精選", isDefault:false,
+    defaultMode:"0.3%（未切換）",
+    action:"CUBE App → 今日方案 → 選「集精選」→ 固定不再切換",
+    covers:["7-ELEVEN","全家","全聯","中油直營"],
+    reward:"2% 小樹點，無上限",
+    color:"#60a5fa"},
+  unicard:{card:"unicard",target:"UP選", isDefault:false,
+    defaultMode:"簡單選（預設）",
+    action:"玉山Wallet → 方案管理 → UP選（需149點/月 或 達成任務）",
+    covers:["高鐵","台鐵","Uber","UberEats","王品","瓦城集團","乾杯","漢來","鼎王","爭鮮","樂子","Agoda","Booking","Klook","KKday","蝦皮","momo","家樂福","UNIQLO","屈臣氏","Apple直營"],
+    specialNote:"星巴克→改用LINE Pay付款，歸行動支付類，同樣4.5%",
+    reward:"4.5% e point（百大全通路）",
+    color:"#a3e635"},
+  ricard: {card:"ricard",target:"玩旅刷", isDefault:false,
+    defaultMode:"天天刷（預設）",
+    action:"Richart App → 權益切換 → 玩旅刷（固定備用）",
+    covers:["機票（20+航空）","旅行社（雄獅/易遊等）","海外外幣消費"],
+    reward:"3.3%，無上限",
+    color:"#fbbf24"},
 };
 
+// ─── REWARD TEMPLATES ────────────────────────────────────────
+const R={
+  jx_20:  {id:"starlux",text:"20元/哩",score:4,note:"一般消費，入星宇COSMILE",method:"直刷",mode:null},
+  jx_10:  {id:"starlux",text:"10元/哩",score:8,note:"海外消費，入星宇COSMILE",method:"直刷",mode:null},
+  jx_sp:  {id:"starlux",text:"10元/哩×2",score:10,note:"指定通路雙倍，直入COSMILE",method:"官網/App",mode:null},
+  jx_none:{id:"starlux",text:"❌ 無哩程",score:0,note:"玉山官方排除（電信/水電/稅/超商/全聯）",method:"—",mode:null},
+  br_20:  {id:"eva",text:"20元/哩",score:4,note:"一般消費，入長榮Infinity",method:"直刷",mode:null},
+  br_10:  {id:"eva",text:"10元/哩",score:8,note:"海外指定消費",method:"直刷",mode:null},
+  br_sp:  {id:"eva",text:"10元/哩",score:10,note:"長榮指定通路，直入Infinity",method:"官網/App",mode:null},
+  br_exp: {id:"eva",text:"8元/哩",score:10,note:"Expedia訂房最優！",method:"Expedia",mode:null},
+  br_ins: {id:"eva",text:"❌ 保費排除",score:0,note:"長榮無限卡官方排除保費",method:"—",mode:null},
+  br_none:{id:"eva",text:"❌ 無哩程",score:0,note:"長榮排除此類消費",method:"—",mode:null},
+  ci_18:  {id:"ci",text:"18元/哩",score:4,note:"一般消費，入華夏帳戶",method:"直刷",mode:null},
+  ci_9:   {id:"ci",text:"9元/哩×2",score:10,note:"指定消費雙倍，入華夏帳戶",method:"直刷",mode:null},
+  ci_none:{id:"ci",text:"❌ 無哩程",score:0,note:"官方排除（電信/超商/全聯/水電/稅/公立醫療）",method:"—",mode:null},
+  ci_now: {id:"ci",text:"18元/哩⚠",score:3,note:"2024/10後海外網購取消雙倍",method:"直刷",mode:null},
+  cb_2:   {id:"cube",text:"2% 小樹點",score:6,note:"集精選：超商/全聯/中油/藥局",method:"集精選",mode:"集精選"},
+  cb_3:   {id:"cube",text:"3% 小樹點",score:8,note:"玩數位：串流/網購",method:"玩數位",mode:"玩數位"},
+  cb_33:  {id:"cube",text:"3.3% 小樹點",score:8,note:"樂饗購（外送/百貨）或趣旅行（機票/訂房）",method:"切換方案",mode:"需切換"},
+  cb_eu:  {id:"cube",text:"3% 小樹點",score:8,note:"趣旅遊：全球含EU",method:"趣旅遊",mode:"趣旅遊"},
+  cb_003: {id:"cube",text:"0.3% ⚠",score:1,note:"未切換方案，CUBE預設回饋（需先切集精選）",method:"—",mode:"預設"},
+  cb_ins: {id:"cube",text:"領券1.2%",score:2,note:"保費需App領券（月限1000點）",method:"App領券",mode:null},
+  uni_none:{id:"unicard",text:"❌ 無回饋",score:0,note:"排除：超商/全聯/電信/水電/稅費",method:"—",mode:null},
+  uni_1:  {id:"unicard",text:"1%（直刷）⚠",score:2,note:"非百大通路，基本1%",method:"基本",mode:"簡單選"},
+  uni_45: {id:"unicard",text:"4.5% e point",score:9,note:"UP選百大（百大全通路適用）",method:"UP選",mode:"UP選"},
+  uni_lp: {id:"unicard",text:"4.5%（LINE Pay）",score:9,note:"改LINE Pay付款→行動支付百大類4.5%",method:"LINE Pay+UP選",mode:"UP選"},
+  uni_eu: {id:"unicard",text:"3.5%⚠",score:7,note:"部分歐盟國在百大，但一般回饋排除歐盟",method:"UP選",mode:"UP選"},
+  ri_2:   {id:"ricard",text:"≈2%",score:5,note:"一般消費方案",method:"天天刷",mode:"天天刷"},
+  ri_33:  {id:"ricard",text:"3.3%",score:8,note:"玩旅刷：指定20+航空/旅行社（固定不換）",method:"玩旅刷",mode:"玩旅刷"},
+  ri_38:  {id:"ricard",text:"≈3.8%",score:8,note:"最高回饋方案",method:"切換方案",mode:"需切換"},
+};
+
+// ─── SCENARIOS ────────────────────────────────────────────────
 const SCENARIOS=[
   {id:"pxmart",name:"全聯",icon:"🛒",group:"量販/超市",parent:"domestic",
    kw:["全聯","pxmart","px"],
    rewards:[R.cb_2,R.ri_2,R.br_20,R.jx_20,R.ci_none,R.uni_none],
    excl:"❌ 中信：排除全聯\n❌ Unicard：全聯非百大，無回饋",
-   pay:[{m:"CUBE集精選",n:"需實體卡或PX Pay；全支付/PX Pay線上/儲值不可"}],
-   tip:"CUBE「集精選」2%，六張卡唯一有效選項。"},
+   pay:[{m:"CUBE集精選（策略固定模式）",n:"需實體卡或PX Pay；不可全支付"}],
+   tip:"CUBE「集精選」2%（策略固定模式）。六張卡唯一有效。"},
   {id:"carrefour",name:"家樂福",icon:"🛒",group:"量販/超市",parent:"domestic",
    kw:["家樂福","carrefour"],
    rewards:[R.uni_45,R.cb_33,R.ri_38,R.br_20,R.jx_20,R.ci_18],
@@ -82,151 +112,163 @@ const SCENARIOS=[
    kw:["7-11","7eleven","711","統一超商"],
    rewards:[R.cb_2,R.ri_2,R.br_20,R.jx_20,R.ci_none,R.uni_none],
    excl:"❌ 中信：排除超商\n❌ Unicard：超商排除（含行動支付）",
-   pay:[{m:"CUBE集精選",n:"2%無上限，唯一有效"},{m:"OpenPoint",n:"可疊加積點"}],
-   tip:"CUBE「集精選」2%，唯一有超商回饋。"},
+   pay:[{m:"CUBE集精選（策略固定模式）",n:"2%無上限"},{m:"OpenPoint",n:"可同時積OpenPoint點數"}],
+   tip:"CUBE「集精選」2%（策略固定模式）。"},
   {id:"family",name:"全家 FamilyMart",icon:"🏪",group:"四大超商",parent:"domestic",
    kw:["全家","familymart"],
    rewards:[R.cb_2,R.ri_2,R.br_20,R.jx_20,R.ci_none,R.uni_none],
    excl:"❌ 中信：排除超商\n❌ Unicard：超商排除",
-   pay:[{m:"CUBE集精選",n:"2%無上限"},{m:"FamilyPay",n:"同時積Fa點"}],
-   tip:"CUBE「集精選」2%，可與FamilyPay積Fa點疊加。"},
-  {id:"lezi",name:"樂子餐廳",icon:"🍳",group:"餐飲",parent:"domestic",
-   kw:["樂子","lezi","le zi","樂子餐廳","lé zi"],
+   pay:[{m:"CUBE集精選（策略固定模式）",n:"2%無上限"},{m:"FamilyPay",n:"可同時積Fa點"}],
+   tip:"CUBE「集精選」2%（策略固定模式）。"},
+  {id:"starbucks",name:"星巴克",icon:"☕",group:"餐飲",parent:"domestic",
+   kw:["星巴克","starbucks"],
+   rewards:[R.uni_lp,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
+   excl:"⚠ 星巴克不在Unicard百大餐飲！直刷Unicard只有1%\n→ 必須改用LINE Pay付款→歸行動支付百大→4.5%",
+   pay:[{m:"LINE Pay+Unicard UP選（關鍵！）",n:"星巴克支援LINE Pay，改用LINE Pay付款→行動支付百大4.5%"}],
+   tip:"必用LINE Pay付款→Unicard UP選行動支付4.5%。直刷Unicard只有1%！",
+   warn:"⚠ 星巴克直刷Unicard=1%！必須用LINE Pay才有4.5%"},
+  {id:"wangpin",name:"王品集團",icon:"🥩",group:"餐飲",parent:"domestic",
+   kw:["王品","wangpin","陶板屋","藝奇","西堤","品田牧場","夏慕尼","原燒"],
    rewards:[R.uni_45,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
-   tip:"樂子在Unicard百大餐飲，UP選 4.5%最佳；CUBE樂饗購3.3%次選。"},
-  {id:"chain_rest",name:"百大連鎖餐廳（王品/饗賓/鼎王等）",icon:"🍽️",group:"餐飲",parent:"domestic",
-   kw:["王品","饗食天堂","饗賓","旭集","瓦城","非常泰","大心","乾杯","漢來","鼎王","爭鮮","定食8","開飯","饗泰多","饗饗"],
+   tip:"Unicard UP選 4.5%（王品集團全線在百大餐飲，可直刷）。"},
+  {id:"wacheng",name:"瓦城集團",icon:"🍜",group:"餐飲",parent:"domestic",
+   kw:["瓦城","wacheng","非常泰","大心","1010湘","時時香","bobo"],
+   rewards:[R.uni_45,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
+   tip:"Unicard UP選 4.5%（瓦城集團全線在百大餐飲，可直刷）。"},
+  {id:"lezi",name:"樂子餐廳",icon:"🍳",group:"餐飲",parent:"domestic",
+   kw:["樂子","lezi"],
+   rewards:[R.uni_45,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
+   tip:"Unicard UP選 4.5%（樂子在百大餐飲，可直刷）。"},
+  {id:"chain_rest",name:"其他百大連鎖（饗賓/鼎王/爭鮮等）",icon:"🍽️",group:"餐飲",parent:"domestic",
+   kw:["饗食天堂","饗賓","旭集","乾杯","漢來","鼎王","爭鮮","定食8"],
    rewards:[R.uni_45,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
    mall:{name:"長榮eShopping",note:"部分可在eShopping買禮券→長榮卡10元/哩",card:"eva"},
-   tip:"Unicard UP選 4.5%（王品/饗賓/瓦城/乾杯/漢來/鼎王/爭鮮在百大餐飲）。"},
-  {id:"gen_rest",name:"速食/咖啡（必勝客/麥當勞/星巴克等）",icon:"🍔",group:"餐飲",parent:"domestic",
-   kw:["必勝客","pizza hut","麥當勞","mcdonalds","kfc","肯德基","漢堡王","摩斯","subway","星巴克","starbucks","路易莎","louisa","cama","85度c","丹堤","mos"],
-   excl:"⚠ Unicard：這些不在百大餐飲！直刷只有1%\n→ 改用LINE Pay付款→行動支付類4.5%",
+   tip:"Unicard UP選 4.5%（均在百大餐飲，可直刷）。"},
+  {id:"gen_rest",name:"速食（必勝客/麥當勞/KFC等）",icon:"🍔",group:"餐飲",parent:"domestic",
+   kw:["必勝客","pizza hut","麥當勞","mcdonalds","kfc","肯德基","漢堡王","摩斯","subway"],
+   excl:"⚠ 這些不在Unicard百大餐飲，直刷只有1%！\n→ 改用LINE Pay付款→行動支付百大4.5%",
    rewards:[
-     {id:"unicard",text:"4.5%（LINE Pay）/ 1%（直刷）",score:8,note:"必須用LINE Pay→行動支付百大4.5%；直刷非百大僅1%！",method:"LINE Pay付款"},
+     {id:"unicard",text:"4.5%（LINE Pay）",score:8,note:"LINE Pay付款→行動支付百大4.5%；直刷非百大僅1%！",method:"LINE Pay+UP選",mode:"UP選"},
      R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
-   pay:[{m:"LINE Pay+Unicard UP選",n:"必勝客/麥當勞支援LINE Pay→行動支付百大4.5%！"}],
-   tip:"速食/咖啡直刷Unicard只有1%！改用LINE Pay付款→行動支付百大類4.5%。",
-   warn:"⚠ Unicard直刷速食/一般咖啡只有1%，必須改LINE Pay才能拿4.5%"},
-  {id:"delivery",name:"外送平台（UberEats/foodpanda）",icon:"🛵",group:"餐飲",parent:"domestic",
-   kw:["uber eats","ubereats","foodpanda","外送","熊貓"],
+   pay:[{m:"LINE Pay+Unicard UP選",n:"速食支援LINE Pay→行動支付百大4.5%"}],
+   tip:"直刷Unicard只有1%！改用LINE Pay付款→4.5%。",
+   warn:"⚠ Unicard直刷速食=1%，必須改LINE Pay"},
+  {id:"delivery",name:"外送（UberEats/foodpanda）",icon:"🛵",group:"餐飲",parent:"domestic",
+   kw:["uber eats","ubereats","foodpanda","外送"],
    rewards:[R.uni_45,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
-   tip:"Unicard UP選 4.5%（UberEats/foodpanda在百大餐飲）；CUBE樂饗購3.3%。"},
+   tip:"Unicard UP選 4.5%（UberEats/foodpanda在百大餐飲，直刷）。"},
   {id:"hsr",name:"高鐵",icon:"🚄",group:"交通",parent:"domestic",
    kw:["高鐵","thsr","台灣高鐵"],
    rewards:[R.uni_45,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
-   pay:[{m:"LINE Pay+Unicard",n:"高鐵App支援LINE Pay→UP選4.5%"}],
-   tip:"Unicard UP選 4.5%（高鐵在百大交通）；CUBE趣旅行3.3%次選。"},
+   pay:[{m:"直刷Unicard或LINE Pay",n:"高鐵在百大交通，直刷4.5%；高鐵App也支援LINE Pay"}],
+   tip:"Unicard UP選 4.5%（高鐵在百大交通，策略固定模式直接刷）。"},
+  {id:"tra",name:"台鐵",icon:"🚃",group:"交通",parent:"domestic",
+   kw:["台鐵","tra","火車","區間車"],
+   rewards:[R.uni_45,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
+   tip:"Unicard UP選 4.5%（台鐵在百大交通，直刷）。"},
+  {id:"uber",name:"Uber / Yoxi 計程車",icon:"🚕",group:"交通",parent:"domestic",
+   kw:["uber","計程車","yoxi","taxi"],
+   rewards:[R.uni_45,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
+   tip:"Unicard UP選 4.5%（Uber/Yoxi在百大交通，直刷）。"},
   {id:"gas",name:"加油站（中油直營）",icon:"⛽",group:"交通",parent:"domestic",
-   kw:["中油","加油","台亞"],
+   kw:["中油","加油"],
    rewards:[R.uni_45,R.cb_2,R.ri_38,R.ci_18,R.br_20,R.jx_20],
    excl:"⚠ Unicard百大加油限「台灣中油直營」",
-   tip:"Unicard UP選 4.5%（限中油直營）；CUBE集精選2%。"},
-  {id:"uber",name:"Uber / 計程車",icon:"🚕",group:"交通",parent:"domestic",
-   kw:["uber","計程車","55688","taxi","yoxi"],
-   rewards:[R.uni_45,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
-   tip:"Unicard UP選 4.5%（Uber/Yoxi在百大交通類）。"},
+   tip:"Unicard UP選 4.5%（限中油直營）；CUBE集精選2%次選。"},
   {id:"telecom",name:"電信費（手機月費）",icon:"📱",group:"電信/帳單",parent:"domestic",
-   kw:["中華電信","台灣大哥大","台哥大","遠傳","電信費","手機費","門號費","行動電話"],
-   rewards:[R.ri_2,R.cb_tel,R.jx_none,R.br_none,R.ci_none,R.uni_none],
-   excl:"❌ 玉山星宇世界卡：官方明確排除「中華電信及民營電信」→零哩程（任何方式均無效）\n❌ 長榮無限卡：排除電信費\n❌ 中信華航：官方排除電信費\n❌ Unicard：非一般消費，零回饋\n⚠ CUBE：不在任何方案，0.3%",
-   pay:[{m:"❌ LINE Pay/行動支付繳電信費",n:"玉山官方：第三方支付支付非一般消費款項亦不回饋"}],
-   tip:"六張卡繳電信費均無哩程。Richart約2%為六張中最高。",
-   warn:"⚠ 星宇/長榮/中信/Unicard繳電信費均無任何回饋！任何方式均無效"},
+   kw:["中華電信","台灣大哥大","台哥大","遠傳","電信費","手機費"],
+   rewards:[R.ri_2,R.cb_003,R.jx_none,R.br_none,R.ci_none,R.uni_none],
+   excl:"❌ 玉山（含星宇世界卡）官方排除「中華電信及民營電信」→零哩程\n❌ 中信：排除電信費\n❌ Unicard：非一般消費\n⚠ CUBE：不在任何方案，僅0.3%",
+   tip:"六張卡均無哩程回饋。Richart約2%為最高（天天刷預設方案）。",
+   warn:"⚠ 電信費：持有六張卡均無哩程！任何方式均無效"},
   {id:"utility",name:"水電費/政府規費",icon:"💡",group:"電信/帳單",parent:"domestic",
-   kw:["台電","水費","電費","瓦斯","稅款","牌照稅","健保費","燃料費"],
+   kw:["台電","水費","電費","瓦斯","稅款","牌照稅","健保費"],
    rewards:[R.ri_2,R.cb_003,R.jx_none,R.br_none,R.ci_none,R.uni_none],
    warn:"⚠ 所有六張卡繳水電/政府規費幾乎無回饋",
-   tip:"水電費建議最方便方式繳，六張卡均無哩程/高回饋。"},
+   tip:"水電費建議最方便方式繳，均無哩程。"},
   {id:"insurance",name:"保費（壽險/產險）",icon:"🛡️",group:"電信/帳單",parent:"domestic",
    kw:["保費","壽險","產險","保險"],
-   rewards:[R.ci_18,R.jx_20,R.ri_38,R.cb_ins,R.uni_1,R.br_ins],
-   excl:"❌ 長榮無限卡：官方明確排除保費！\n⚠ CUBE：需App領券才1.2%（月限1000點）",
-   tip:"中信華航18元/哩（不排除保費）；Richart約3.8%次選。",
-   warn:"⚠ 長榮無限卡排除保費！請勿用長榮卡繳保費"},
+   rewards:[R.ci_18,R.jx_20,R.ri_33,R.cb_ins,R.uni_1,R.br_ins],
+   excl:"❌ 長榮無限卡：官方明確排除保費！\n⚠ CUBE：需App領券才1.2%",
+   tip:"中信華航18元/哩（不排除保費）；Richart玩旅刷3.3%次選。",
+   warn:"⚠ 長榮無限卡排除保費！"},
   {id:"streaming",name:"串流訂閱（Netflix/Spotify等）",icon:"📺",group:"電信/帳單",parent:"domestic",
-   kw:["netflix","spotify","disney+","youtube premium","apple music","kkbox","max","line tv"],
-   rewards:[R.cb_3,R.uni_45,R.ri_38,R.ci_18,R.br_20,R.jx_20],
-   tip:"CUBE「玩數位」3%（Netflix/Spotify/Disney+/KKBOX/YouTube Premium/Max/Apple媒體服務）。"},
+   kw:["netflix","spotify","disney+","youtube premium","apple music","kkbox","max"],
+   rewards:[R.cb_3,R.uni_45,R.ri_33,R.ci_18,R.br_20,R.jx_20],
+   excl:"⚠ CUBE策略固定集精選→串流改用其他卡！\nCUBE集精選不涵蓋串流（玩數位才有）",
+   tip:"Unicard UP選 4.5%（Apple媒體/串流類在百大）；CUBE若已固定集精選→改刷Unicard。",
+   warn:"⚠ 策略提醒：CUBE已固定集精選，串流請改刷Unicard UP選4.5%"},
   {id:"shopee",name:"蝦皮購物",icon:"🛍️",group:"網購",parent:"domestic",
    kw:["shopee","蝦皮"],
    rewards:[R.uni_45,R.cb_3,R.ri_38,R.ci_18,R.br_20,R.jx_20],
-   tip:"Unicard UP選 4.5%（蝦皮在百大電商）；CUBE玩數位3%次選。"},
+   excl:"⚠ CUBE策略固定集精選→網購請改刷Unicard",
+   tip:"Unicard UP選 4.5%（蝦皮在百大電商）；CUBE已固定集精選，請改刷Unicard。"},
   {id:"momo",name:"momo購物",icon:"🛍️",group:"網購",parent:"domestic",
-   kw:["momo","富邦媒體"],
+   kw:["momo"],
    rewards:[R.uni_45,R.cb_3,R.ri_38,R.ci_18,R.br_20,R.jx_20],
+   excl:"⚠ CUBE策略固定集精選→網購請改刷Unicard",
    tip:"Unicard UP選 4.5%（momo在百大電商）。"},
-  {id:"apple",name:"Apple Store（購機）",icon:"🍎",group:"網購",parent:"domestic",
-   kw:["apple store","iphone","ipad","mac","蘋果","apple"],
-   rewards:[R.uni_45,R.ri_38,R.ci_18,R.cb_33,R.br_20,R.jx_20],
-   excl:"⚠ CUBE玩數位的「Apple媒體服務」≠ Apple Store購機！購機需切換趣旅行",
+  {id:"apple",name:"Apple Store",icon:"🍎",group:"網購",parent:"domestic",
+   kw:["apple store","iphone","ipad","mac","蘋果"],
+   rewards:[R.uni_45,R.ri_33,R.ci_18,R.cb_33,R.br_20,R.jx_20],
    tip:"Unicard UP選 4.5%（Apple直營在百大精選）。"},
   {id:"dept",name:"百貨公司（新光三越/SOGO等）",icon:"🏬",group:"百貨/購物",parent:"domestic",
-   kw:["sogo","新光三越","微風","台北101","統一時代","誠品","lalaport","漢神","京站"],
-   rewards:[R.uni_45,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
-   excl:"⚠ 百貨店中櫃以簽單名稱認定，獨立店中櫃不算百貨",
-   tip:"Unicard UP選 4.5%（主要百貨在百大）；CUBE樂饗購3.3%。"},
+   kw:["sogo","新光三越","微風","台北101","統一時代","誠品","lalaport","漢神"],
+   rewards:[R.uni_45,R.cb_33,R.ri_33,R.ci_18,R.br_20,R.jx_20],
+   tip:"Unicard UP選 4.5%（主要百貨在百大）。"},
   {id:"drug",name:"藥妝/藥局",icon:"💊",group:"百貨/購物",parent:"domestic",
    kw:["屈臣氏","康是美","大樹藥局","丁丁藥妝","藥局","watsons"],
-   rewards:[R.uni_45,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
-   tip:"Unicard UP選 4.5%（屈臣氏/康是美/大樹/丁丁在百大量販生活）。"},
-  {id:"fashion",name:"UNIQLO / NET / 服飾",icon:"👕",group:"百貨/購物",parent:"domestic",
-   kw:["uniqlo","優衣庫","net","服飾","迪卡儂","decathlon"],
-   rewards:[R.uni_45,R.cb_33,R.ri_38,R.ci_18,R.br_20,R.jx_20],
-   tip:"Unicard UP選 4.5%（UNIQLO/NET/迪卡儂在百大）。"},
+   rewards:[R.uni_45,R.cb_2,R.ri_33,R.ci_18,R.br_20,R.jx_20],
+   tip:"Unicard UP選 4.5%（屈臣氏/康是美/大樹/丁丁在百大）。"},
   {id:"jx_ticket",name:"星宇航空購票",icon:"🌟",group:"航空購票",parent:"airline",
    kw:["星宇","starlux","jx"],
    rewards:[R.jx_sp,R.uni_45,R.cb_33,R.ri_33,R.br_20,R.ci_18],
    mall:{name:"星宇 béshopping",note:"官網/App購票=指定通路10元/哩雙倍+9折",card:"starlux"},
-   tip:"星宇世界卡首選：10元/哩雙倍+9折優惠。"},
+   tip:"星宇世界卡首選：10元/哩雙倍。"},
   {id:"eva_ticket",name:"長榮航空購票",icon:"💚",group:"航空購票",parent:"airline",
    kw:["長榮","eva air","eva"],
    rewards:[R.br_sp,R.uni_45,R.cb_33,R.ri_33,R.jx_20,R.ci_18],
-   mall:{name:"長榮 eShopping",note:"透過eShopping購物+刷長榮卡，雙重積哩",card:"eva"},
-   tip:"長榮無限卡首選：10元/哩直入Infinity。"},
+   mall:{name:"長榮 eShopping",note:"eShopping購物+刷長榮卡，雙重積哩",card:"eva"},
+   tip:"長榮無限卡首選：10元/哩直入Infinity。次選Richart玩旅刷3.3%（策略固定）。"},
   {id:"ci_ticket",name:"華航購票",icon:"❤️",group:"航空購票",parent:"airline",
    kw:["華航","中華航空","china airlines"],
    rewards:[R.ci_9,R.uni_45,R.cb_33,R.ri_33,R.jx_20,R.br_20],
    mall:{name:"華航 eMall",note:"華航eMall/免稅品=指定消費9元/哩",card:"ci"},
-   tip:"中信華航鼎尊首選：9元/哩直入華夏，享折扣及金卡禮遇。"},
+   tip:"中信華航鼎尊首選：9元/哩。次選Richart玩旅刷3.3%（策略固定）。"},
   {id:"other_airline",name:"其他航空（JAL/ANA/新航等）",icon:"✈️",group:"航空購票",parent:"airline",
    kw:["日航","jal","ana","全日空","新航","singapore airlines","國泰航空","虎航","樂桃","酷航","越捷"],
    rewards:[R.ri_33,R.cb_33,R.uni_45,R.jx_20,R.br_20,R.ci_18],
-   tip:"Richart玩旅刷3.3%（20+航空）；CUBE趣旅行3.3%外幣亦適用。"},
+   tip:"Richart玩旅刷3.3%（策略固定，20+航空均涵蓋）。"},
   {id:"hotel",name:"旅遊訂房（Agoda/Booking/Expedia）",icon:"🏨",group:"旅遊",parent:"travel",
-   kw:["agoda","booking","expedia","hotels.com","訂房","飯店","hotel"],
+   kw:["agoda","booking","expedia","hotels.com","訂房","飯店"],
    rewards:[R.br_exp,R.ci_9,R.uni_45,R.cb_33,R.ri_33,R.jx_20],
-   tip:"長榮無限卡Expedia訂房8元/哩最優！中信華航訂房平台9元/哩；Agoda選Unicard 4.5%。"},
+   tip:"長榮無限卡Expedia訂房8元/哩最優！中信華航訂房9元/哩；Agoda選Unicard 4.5%。"},
   {id:"klook",name:"Klook / KKday",icon:"🎢",group:"旅遊",parent:"travel",
    kw:["klook","kkday","旅遊活動","景點"],
    rewards:[R.uni_45,R.cb_33,R.ri_33,R.ci_18,R.br_20,R.jx_20],
    tip:"Unicard UP選 4.5%（KKday/Klook在百大旅遊）。"},
-  {id:"travel_co",name:"旅行社（雄獅/易遊等）",icon:"🗺️",group:"旅遊",parent:"travel",
-   kw:["雄獅","易遊網","東南旅遊","可樂旅遊","五福","eztravel","鳳凰","山富"],
-   rewards:[R.ri_33,R.br_sp,R.uni_45,R.cb_33,R.ci_9,R.jx_20],
-   tip:"Richart玩旅刷3.3%（主要旅行社在列）；購長榮假期登錄可10元/哩。"},
   {id:"japan",name:"日本 實體消費",icon:"🗾",group:"海外－日本",parent:"overseas",
    kw:["日本","japan","東京","大阪","京都","北海道","沖繩","名古屋","福岡"],
    rewards:[
-     {id:"cube",text:"3.5%（日本賞）/3%（趣旅遊）",score:9,note:"日本賞限時3.5%；趣旅遊3%常駐",method:"日本賞/趣旅遊",warn:"⚠ 日本賞為限時活動"},
-     R.ci_9,R.uni_45,R.jx_10,R.br_10,R.ri_38],
-   tip:"CUBE日本賞3.5%（限期）；中信華航9元/哩；Unicard 4.5%。"},
+     {id:"cube",text:"3.5%（日本賞限期）/3%（趣旅遊）",score:9,note:"日本賞限時3.5%；趣旅遊3%常駐",method:"日本賞/趣旅遊",mode:"需切換",warn:"⚠ 策略固定集精選→出國前臨時切換趣旅遊"},
+     R.ci_9,R.uni_45,R.jx_10,R.br_10,R.ri_33],
+   warn:"⚠ CUBE策略固定集精選，出國前需臨時切換趣旅遊（這是策略允許的例外）",
+   tip:"出國例外：CUBE可臨時切換趣旅遊3%；中信華航9元/哩；Unicard 4.5%。"},
   {id:"eu",name:"歐洲EU 實體消費",icon:"🏰",group:"海外－歐洲",parent:"overseas",
-   kw:["歐洲","法國","德國","義大利","英國","西班牙","歐盟","荷蘭","奧地利","義大利"],
-   rewards:[R.cb_eu,R.ci_9,R.ri_38,R.jx_10,R.br_10,R.uni_eu],
-   excl:"✓ 星宇世界卡：玉山官方公告聯名卡歐洲實體有回饋\n✓ 中信華航鼎尊：哩程卡不擋EU\n✓ CUBE趣旅遊：明確含歐洲\n✓ Richart：不擋歐盟",
-   warn:"⚠ Unicard歐盟排除一般回饋，但部分歐盟國在百大可拿加碼3.5%",
-   tip:"CUBE趣旅遊3%（不擋EU）；中信華航9元/哩；星宇10元/哩；Richart 3.8%。"},
-  {id:"sea",name:"東南亞/韓國 實體消費",icon:"🌴",group:"海外－亞洲",parent:"overseas",
-   kw:["泰國","韓國","越南","印尼","菲律賓","馬來西亞","新加坡","東南亞","曼谷","首爾","峇里"],
-   rewards:[R.uni_45,R.ci_9,R.cb_33,R.jx_10,R.br_10,R.ri_38],
+   kw:["歐洲","法國","德國","義大利","英國","西班牙","歐盟","荷蘭"],
+   rewards:[R.cb_eu,R.ci_9,R.ri_33,R.jx_10,R.br_10,R.uni_eu],
+   excl:"✓ 星宇世界卡：歐洲實體有回饋\n✓ 中信華航鼎尊：不擋EU\n✓ CUBE趣旅遊：含EU\n✓ Richart：不擋EU",
+   warn:"⚠ CUBE策略固定集精選，出國前臨時切換趣旅遊（例外允許）",
+   tip:"出國例外：CUBE臨時切趣旅遊3%；中信9元/哩；星宇10元/哩；Richart 3.3%。"},
+  {id:"sea",name:"東南亞/韓國 實體",icon:"🌴",group:"海外－亞洲",parent:"overseas",
+   kw:["泰國","韓國","越南","印尼","菲律賓","馬來西亞","新加坡","曼谷","首爾","峇里"],
+   rewards:[R.uni_45,R.ci_9,R.cb_33,R.jx_10,R.br_10,R.ri_33],
    tip:"Unicard 4.5%（韓/泰/越/菲/馬/新在百大）；中信華航9元/哩。"},
   {id:"intl_online",name:"海外網站購物（外幣）",icon:"🌐",group:"海外－美洲",parent:"overseas",
    kw:["amazon","rakuten","ebay","海外網購","外幣網購"],
-   rewards:[R.ri_38,R.cb_33,R.uni_45,R.jx_10,R.br_10,R.ci_now],
-   excl:"❌ 中信華航：2024/10後海外網購無雙倍，退回18元/哩",
-   warn:"⚠ 中信華航海外網購已無9元/哩！",
-   tip:"Richart外幣3.8%；CUBE趣旅遊3%；星宇/長榮10元/哩；中信勿用海外網購。"},
+   rewards:[R.ri_33,R.cb_eu,R.uni_45,R.jx_10,R.br_10,R.ci_now],
+   excl:"❌ 中信：2024/10後海外網購無雙倍",
+   tip:"Richart玩旅刷3.3%（策略固定）；CUBE切趣旅遊3%；星宇/長榮10元/哩。"},
 ];
 
 const idx={};
@@ -247,20 +289,18 @@ const GROUPS=[
   {id:"travel",  name:"旅遊",    icon:"🗺️", subs:["旅遊"]},
   {id:"overseas",name:"海外消費",icon:"🌍", subs:["海外－日本","海外－亞洲","海外－歐洲","海外－美洲"]},
 ];
+
 const getKey=()=>localStorage.getItem("ant_key")||"";
 const setKey=k=>localStorage.setItem("ant_key",k);
 
 async function queryLLM(q){
   const key=getKey();if(!key)throw new Error("NO_KEY");
-  const sys=`你是台灣信用卡哩程優化助理，熟知官方但書。用戶持6張卡：
-1.玉山星宇世界卡：國內20元/哩，海外10元/哩，星宇官網10元/哩雙倍；❌排除：電信費/水電/稅/超商/全聯；✅歐洲實體有回饋
-2.長榮無限卡：國內20元/哩，海外10元/哩，長榮官網10元/哩，Expedia訂房8元/哩；❌排除：保費
-3.中信華航鼎尊：國內18元/哩，海外實體/華航官網/訂房9元/哩，生日海外6元/哩；❌排除：電信/水電/稅/超商/全聯/公立醫療；2024/10後海外網購無雙倍；✅保費可刷
-4.CUBE卡：玩數位3%串流網購，樂饗購3.3%外送百貨，趣旅行3.3%機票訂房，集精選2%超商全聯，趣旅遊3%含EU，慶生月10%；❌電信0.3%；❌醫療排除；保費需領券1.2%
-5.Unicard：UP選百大4.5%（含LINE Pay/台鐵高鐵Uber中油/各百貨/UberEats foodpanda/王品饗賓鼎王爭鮮樂子/Agoda Booking KKday Klook/蝦皮momo/家樂福UNIQLO屈臣氏/Apple直營）；❌超商全聯電信水電；非百大餐廳直刷1%→LINE Pay拿4.5%
-6.Richart：玩旅刷3.3%20+航空旅行社，海外3.3%，最高3.8%，不擋EU
-支付：LINE Pay/悠遊付/icashpay/FamilyPay/OpenPoint/全支付
-針對「${q}」用JSON推薦（不含代碼塊）：{"category":"類別","recommendations":[{"rank":1,"card":"卡名","payment":"方式","reward":"回饋","reason":"含但書"}],"notes":"關鍵但書","mall_tip":null或"Mall攻略"}`;
+  const sys=`你是台灣信用卡哩程優化助理，熟知官方但書。用戶持6張卡，且已採用固定策略：
+CUBE卡→固定集精選（超商/全聯2%），Unicard→固定UP選（百大全通路4.5%），Richart→固定玩旅刷（航空旅行社3.3%）
+其他3張：星宇世界卡（國內20/海外10/指定10×2），長榮無限卡（20/10/Expedia訂房8，排除保費），中信華航鼎尊（18/海外實體9，排除電信超商全聯稅費，保費可刷）
+重要但書：電信費六張卡均無哩程；超商/全聯只有CUBE集精選2%；星巴克等非百大餐廳→Unicard必須用LINE Pay才有4.5%（直刷只1%）
+針對「${q}」，考慮用戶策略後，JSON格式推薦（不含代碼塊）：
+{"category":"類別","recommendations":[{"rank":1,"card":"卡名","payment":"支付方式","reward":"回饋","reason":"含策略模式說明"}],"notes":"重要但書","mall_tip":null}`;
   const resp=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
     headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
@@ -274,7 +314,7 @@ async function queryLLM(q){
   catch{return{category:"AI分析",recommendations:[],notes:t,mall_tip:null};}
 }
 
-let ST={tab:"search",query:"",sel:null,results:[],expG:null,expS:null,llm:null,loading:false};
+let ST={tab:"search",query:"",sel:null,results:[],expG:null,expS:null,llm:null,loading:false,showStrategy:false};
 const MEDAL=["🏆","🥈","🥉","④","⑤","⑥"];
 
 function el(tag,at,ch){
@@ -287,16 +327,13 @@ function el(tag,at,ch){
     else if(k==="type")e.type=v;
     else e[k]=v;
   });
-  [ch].flat().forEach(c=>{
-    if(c==null||c===false)return;
-    e.appendChild(typeof c==="string"?document.createTextNode(c):c);
-  });
+  [ch].flat().filter(c=>c!=null&&c!==false).forEach(c=>
+    e.appendChild(typeof c==="string"?document.createTextNode(c):c));
   return e;
 }
-
 function sbar(score){
   const col=score>=9?"#4ade80":score>=7?"#60a5fa":score>=4?"#fbbf24":"#6b7280";
-  const d=el("div",{style:{display:"flex",gap:"2px",alignItems:"center",marginTop:"3px"}});
+  const d=el("div",{style:{display:"flex",gap:"2px",marginTop:"3px"}});
   for(let i=0;i<10;i++)d.appendChild(el("div",{style:{width:"5px",height:"7px",borderRadius:"2px",flexShrink:"0",background:i<score?col:"rgba(255,255,255,0.1)"}}));
   return d;
 }
@@ -304,37 +341,62 @@ function ctag(id){
   const c=CARDS[id];if(!c)return document.createTextNode("");
   return el("span",{className:"tag",style:{background:c.bg,color:c.color,border:`1px solid ${c.color}33`}},c.tag);
 }
+
+// Mode badge: shows if the recommended mode matches strategy
+function modeBadge(mode){
+  if(!mode)return null;
+  const strategyModes={"集精選":true,"UP選":true,"玩旅刷":true};
+  const needSwitch=mode==="需切換"||mode==="天天刷"||mode==="預設"||mode==="簡單選";
+  const isStrategy=strategyModes[mode];
+  if(mode==="預設"||mode==="天天刷"||mode==="簡單選")
+    return el("span",{className:"mode-def"},`⚪ ${mode}`);
+  if(needSwitch)
+    return el("span",{className:"mode-warn"},`⚠ ${mode}`);
+  if(isStrategy)
+    return el("span",{className:"mode-ok"},`✓ 策略模式`);
+  return el("span",{className:"mode-warn"},`↻ ${mode}`);
+}
+
 function rrow(r,rank){
   const c=CARDS[r.id];if(!c)return null;
   const top=rank===0&&r.score>0;
-  const row=el("div",{className:"row",style:{background:top?c.bg:"rgba(255,255,255,0.03)",border:`1px solid ${top?c.color+"44":"rgba(255,255,255,0.07)"}`}});
+  const row=el("div",{className:"row",style:{background:top?c.bg:"rgba(255,255,255,0.03)",
+    border:`1px solid ${top?c.color+"44":"rgba(255,255,255,0.07)"}`}});
   row.appendChild(el("div",{className:"row-bar",style:{background:r.score>0?c.color:"#374151"}}));
   row.appendChild(el("span",{style:{fontSize:rank<3?"20px":"14px",minWidth:"24px",textAlign:"center",marginLeft:"4px"}},MEDAL[rank]));
   const info=el("div",{style:{flex:"1",minWidth:"0"}});
-  const tl=el("div",{style:{display:"flex",alignItems:"center",gap:"7px",marginBottom:"3px"}});
+  const tl=el("div",{style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"3px",flexWrap:"wrap"}});
   tl.appendChild(ctag(r.id));
   tl.appendChild(el("span",{style:{fontSize:"14px",color:r.score>0?c.color:"#6b7280",fontWeight:"600"}},c.short));
+  if(r.mode){const mb=modeBadge(r.mode);if(mb)tl.appendChild(mb);}
   info.appendChild(tl);
   info.appendChild(el("div",{style:{fontSize:"13px",color:"#9ca3af",lineHeight:"1.5"}},r.note));
   if(r.warn)info.appendChild(el("div",{style:{fontSize:"12px",color:"#f59e0b",marginTop:"3px"}},r.warn));
   row.appendChild(info);
   const right=el("div",{style:{textAlign:"right",flexShrink:"0"}});
   right.appendChild(el("div",{style:{fontSize:"14px",fontWeight:"700",color:r.score>0?c.color:"#4b5563",whiteSpace:"nowrap"}},r.text));
-  if(r.method&&r.method!=="—")right.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginTop:"2px"}},r.method));
+  if(r.method&&r.method!=="—")right.appendChild(el("div",{style:{fontSize:"11px",color:"#6b7280",marginTop:"2px"}},r.method));
   right.appendChild(sbar(r.score));
   row.appendChild(right);
   return row;
 }
+
 function spanel(s){
   const div=el("div",{});
   div.appendChild(el("div",{className:"box",style:{background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.3)",color:"#c7d2fe"}},
-    [el("span",{style:{fontSize:"12px",fontWeight:"700",color:"#818cf8",display:"block",marginBottom:"4px"}},"💡 建議"),document.createTextNode(s.tip)]));
+    [el("span",{style:{fontSize:"12px",fontWeight:"700",color:"#818cf8",display:"block",marginBottom:"4px"}},"💡 建議"),
+     document.createTextNode(s.tip)]));
   if(s.warn)div.appendChild(el("div",{className:"box",style:{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.3)",color:"#fca5a5",whiteSpace:"pre-line"}},s.warn));
   if(s.excl)div.appendChild(el("div",{className:"box",style:{background:"rgba(245,158,11,0.08)",border:"1px solid rgba(245,158,11,0.3)",color:"#fde68a",whiteSpace:"pre-line"}},
     [el("span",{style:{fontWeight:"700",display:"block",marginBottom:"4px"}},"📋 官方但書"),document.createTextNode(s.excl)]));
   if(s.mall)div.appendChild(el("div",{className:"box",style:{background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.3)"}},
-    [el("div",{style:{fontSize:"12px",fontWeight:"700",color:"#fbbf24",marginBottom:"4px"}},"✈ 航空Mall攻略"),
+    [el("div",{style:{fontSize:"12px",fontWeight:"700",color:"#fbbf24",marginBottom:"4px"}},"✈ 航空Mall"),
      el("div",{style:{fontSize:"13px",color:"#fde68a"}},s.mall.note)]));
+  // Legend
+  div.appendChild(el("div",{style:{display:"flex",gap:"8px",flexWrap:"wrap",marginBottom:"10px"}},
+    [el("span",{className:"mode-ok"},"✓ 策略模式（已設定，直接刷）"),
+     el("span",{className:"mode-warn"},"⚠ 需切換"),
+     el("span",{className:"mode-def"},"⚪ 預設")]));
   div.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginBottom:"10px"}},"回饋排行"));
   [...s.rewards].sort((a,b)=>b.score-a.score).forEach((r,i)=>{const row=rrow(r,i);if(row)div.appendChild(row);});
   if(s.pay?.length){
@@ -346,13 +408,84 @@ function spanel(s){
   return div;
 }
 
+// ─── STRATEGY PANEL ──────────────────────────────────────────
+function strategyPanel(){
+  const div=el("div",{style:{padding:"16px"}});
+
+  div.appendChild(el("div",{style:{fontSize:"18px",fontWeight:"700",marginBottom:"4px"}},"📌 三卡固定策略"));
+  div.appendChild(el("div",{style:{fontSize:"13px",color:"#6b7280",marginBottom:"20px",lineHeight:"1.6"}},
+    "每張卡設定一個固定模式，涵蓋所有日常消費，無需每天切換。"));
+
+  // Coverage summary
+  div.appendChild(el("div",{style:{fontSize:"12px",fontWeight:"700",color:"#818cf8",letterSpacing:"2px",textTransform:"uppercase",marginBottom:"10px"}},"涵蓋通路一覽"));
+  const coverTable=[
+    {icon:"🏪",item:"7-11 / 全家",card:"CUBE",mode:"集精選",reward:"2%",ok:true},
+    {icon:"🛒",item:"全聯",card:"CUBE",mode:"集精選",reward:"2%",ok:true},
+    {icon:"🚄",item:"高鐵",card:"Unicard",mode:"UP選",reward:"4.5%",ok:true},
+    {icon:"🚃",item:"台鐵",card:"Unicard",mode:"UP選",reward:"4.5%",ok:true},
+    {icon:"☕",item:"星巴克",card:"Unicard",mode:"UP選+LINE Pay",reward:"4.5%",ok:true,note:"必須LINE Pay付款"},
+    {icon:"🥩",item:"王品集團",card:"Unicard",mode:"UP選",reward:"4.5%",ok:true},
+    {icon:"🍜",item:"瓦城集團",card:"Unicard",mode:"UP選",reward:"4.5%",ok:true},
+    {icon:"🚕",item:"Uber",card:"Unicard",mode:"UP選",reward:"4.5%",ok:true},
+    {icon:"🛵",item:"Uber Eats",card:"Unicard",mode:"UP選",reward:"4.5%",ok:true},
+    {icon:"✈️",item:"機票/旅行社",card:"Richart",mode:"玩旅刷",reward:"3.3%",ok:true},
+  ];
+  coverTable.forEach(row=>{
+    const r=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"9px 10px",marginBottom:"5px",background:"rgba(255,255,255,0.03)",borderRadius:"10px",border:"1px solid rgba(255,255,255,0.07)"}});
+    r.appendChild(el("span",{style:{fontSize:"18px",flexShrink:"0"}},row.icon));
+    const info=el("div",{style:{flex:"1",minWidth:"0"}});
+    info.appendChild(el("div",{style:{fontSize:"14px",fontWeight:"600",color:"#e8eaf0"}},row.item));
+    if(row.note)info.appendChild(el("div",{style:{fontSize:"11px",color:"#f59e0b",marginTop:"2px"}},`⚠ ${row.note}`));
+    r.appendChild(info);
+    const right=el("div",{style:{textAlign:"right",flexShrink:"0"}});
+    right.appendChild(el("div",{style:{fontSize:"13px",fontWeight:"700",color:"#4ade80"}},row.reward));
+    right.appendChild(el("div",{style:{fontSize:"11px",color:"#6b7280",marginTop:"1px"}},`${row.card} ${row.mode}`));
+    r.appendChild(right);
+    div.appendChild(r);
+  });
+
+  // Per-card setup instructions
+  div.appendChild(el("div",{style:{fontSize:"12px",fontWeight:"700",color:"#818cf8",letterSpacing:"2px",textTransform:"uppercase",marginTop:"20px",marginBottom:"10px"}},"切換設定步驟"));
+
+  Object.values(STRATEGY).forEach(s=>{
+    const c=CARDS[s.card];
+    const card=el("div",{style:{borderRadius:"14px",padding:"14px",marginBottom:"12px",border:`1px solid ${c.color}33`,background:`${c.bg}`}});
+    // Header
+    const hdr=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"10px"}});
+    hdr.appendChild(el("span",{className:"tag",style:{background:c.bg,color:c.color,border:`1px solid ${c.color}44`,fontSize:"12px"}},c.tag));
+    hdr.appendChild(el("span",{style:{fontSize:"16px",fontWeight:"700",color:c.color}},c.short));
+    hdr.appendChild(el("span",{className:"mode-warn",style:{marginLeft:"auto"}},`⚠ 非預設`));
+    card.appendChild(hdr);
+    // Default vs target
+    card.appendChild(el("div",{style:{display:"flex",gap:"8px",alignItems:"center",marginBottom:"8px"}});
+    card.lastChild.appendChild(el("div",{className:"mode-def"},`預設：${s.defaultMode}`));
+    card.lastChild.appendChild(el("span",{style:{color:"#6b7280",fontSize:"16px"}},"→"));
+    card.lastChild.appendChild(el("div",{className:"mode-ok"},`目標：${s.target}`));
+    // Action step
+    card.appendChild(el("div",{style:{background:"rgba(0,0,0,0.3)",borderRadius:"8px",padding:"10px 12px",fontSize:"13px",color:"#d1d5db",lineHeight:"1.7",marginBottom:"8px"}},
+      [el("span",{style:{fontWeight:"700",color:"#fbbf24"}},"📱 操作步驟："),document.createTextNode("\n"+s.action)]));
+    // Covers
+    card.appendChild(el("div",{style:{fontSize:"12px",color:"#9ca3af",lineHeight:"1.8"}},
+      `涵蓋：${s.covers.slice(0,6).join("、")}${s.covers.length>6?"…":""}`));
+    if(s.specialNote)card.appendChild(el("div",{style:{fontSize:"12px",color:"#f59e0b",marginTop:"4px"}},`★ ${s.specialNote}`));
+    div.appendChild(card);
+  });
+
+  // Exception note
+  div.appendChild(el("div",{className:"box",style:{background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.25)",color:"#a5b4fc"}},
+    [el("span",{style:{fontWeight:"700",display:"block",marginBottom:"4px"}},"🌍 出國例外"),
+     document.createTextNode("出國前可將CUBE臨時切換為「趣旅遊」（全球含EU 3%），回國後再切回集精選。這是策略允許的少數例外情況。")]));
+
+  return div;
+}
+
 function showKeyModal(cb){
   const mc=document.getElementById("mc");mc.innerHTML="";
   const bg=el("div",{className:"modal-bg",onClick:e=>{if(e.target===bg)mc.innerHTML="";}});
   const box=el("div",{className:"modal"});
   box.appendChild(el("div",{style:{fontSize:"19px",fontWeight:"700",marginBottom:"8px"}},"🔑 Anthropic API Key"));
   box.appendChild(el("div",{style:{fontSize:"13px",color:"#9ca3af",marginBottom:"16px",lineHeight:"1.7"}},
-    "AI搜尋需要您的 Anthropic API Key。\n申請：console.anthropic.com → API Keys\nKey 僅存在您裝置的 localStorage，不外傳。"));
+    "AI搜尋需要 Anthropic API Key。\n申請：console.anthropic.com → API Keys\nKey 存在裝置 localStorage，不外傳。"));
   const inp=el("input",{type:"password",placeholder:"sk-ant-api03-...",
     style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
       borderRadius:"10px",padding:"13px 14px",fontSize:"15px",color:"#e8eaf0",outline:"none",marginBottom:"12px"},
@@ -360,25 +493,22 @@ function showKeyModal(cb){
   box.appendChild(inp);
   const btnRow=el("div",{style:{display:"flex",gap:"8px"}});
   btnRow.appendChild(el("button",{onClick:()=>mc.innerHTML="",style:{flex:"1",padding:"13px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",fontSize:"14px",color:"#9ca3af"}},"取消"));
-  btnRow.appendChild(el("button",{onClick:()=>{
-    const v=inp.value.trim();if(!v)return;
-    setKey(v);mc.innerHTML="";
-    if(cb)cb();
-  },style:{flex:"2",padding:"13px",background:"rgba(99,102,241,0.85)",border:"none",borderRadius:"10px",fontSize:"14px",fontWeight:"700",color:"white"}},"儲存並搜尋"));
+  btnRow.appendChild(el("button",{onClick:()=>{const v=inp.value.trim();if(!v)return;setKey(v);mc.innerHTML="";if(cb)cb();},
+    style:{flex:"2",padding:"13px",background:"rgba(99,102,241,0.85)",border:"none",borderRadius:"10px",fontSize:"14px",fontWeight:"700",color:"white"}},"儲存並搜尋"));
   box.appendChild(btnRow);
   if(getKey())box.appendChild(el("button",{onClick:()=>{setKey("");mc.innerHTML="";render();},
-    style:{width:"100%",marginTop:"10px",padding:"8px",background:"transparent",border:"none",fontSize:"13px",color:"#6b7280"}},"清除已存的 Key"));
+    style:{width:"100%",marginTop:"10px",padding:"8px",background:"transparent",border:"none",fontSize:"13px",color:"#6b7280"}},"清除 Key"));
   bg.appendChild(box);mc.appendChild(bg);
 }
 
 async function doLLM(){
-  if(!ST.query.trim())return;
+  if(!ST.query.trim()||ST.loading)return;
   if(!getKey()){showKeyModal(doLLM);return;}
   ST.loading=true;ST.llm=null;render();
   try{ST.llm=await queryLLM(ST.query);}
   catch(e){
     if(e.message==="NO_KEY"){showKeyModal(doLLM);ST.loading=false;render();return;}
-    ST.llm={category:"錯誤",recommendations:[],notes:`API錯誤：${e.message}。請確認 API Key 是否正確。`,mall_tip:null};
+    ST.llm={category:"錯誤",recommendations:[],notes:`API錯誤：${e.message}`,mall_tip:null};
   }
   ST.loading=false;render();
 }
@@ -388,31 +518,44 @@ function render(){
   const wrap=el("div",{});
 
   // Header
-  const hdr=el("div",{style:{padding:"22px 18px 14px",background:"linear-gradient(160deg,#0e1524,#111827)"}});
-  hdr.appendChild(el("div",{style:{fontSize:"11px",letterSpacing:"4px",color:"#6b7280",textTransform:"uppercase",marginBottom:"5px"}},"Mileage Optimizer v3.2"));
-  hdr.appendChild(el("div",{style:{fontSize:"24px",fontWeight:"700"}},"哩程刷卡智慧助理"));
-  hdr.appendChild(el("div",{style:{fontSize:"13px",color:"#6b7280",marginTop:"3px"}},"已核對玉山官方公告 · 星宇/長榮電信費均排除"));
-  const chips=el("div",{style:{display:"flex",flexWrap:"wrap",gap:"7px",marginTop:"12px"}});
-  Object.values(CARDS).forEach(c=>chips.appendChild(el("div",{style:{fontSize:"11px",fontWeight:"700",padding:"3px 9px",borderRadius:"14px",background:c.bg,color:c.color,border:`1px solid ${c.color}33`}},`${c.tag} ${c.short}`)));
-  hdr.appendChild(chips);wrap.appendChild(hdr);
+  const hdr=el("div",{style:{padding:"20px 18px 14px",background:"linear-gradient(160deg,#0e1524,#111827)"}});
+  hdr.appendChild(el("div",{style:{fontSize:"11px",letterSpacing:"4px",color:"#6b7280",textTransform:"uppercase",marginBottom:"4px"}},"Mileage Optimizer v3.3"));
+  hdr.appendChild(el("div",{style:{fontSize:"22px",fontWeight:"700"}},"哩程刷卡智慧助理"));
+  hdr.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginTop:"3px"}},"三卡固定策略 · 無需每日切換 · 官方但書核對"));
+  wrap.appendChild(hdr);
 
-  // Tabs
+  // Tabs — 加入「策略」tab
   const tabs=el("div",{style:{display:"flex",borderBottom:"1px solid rgba(255,255,255,0.08)",background:"#0a0d14"}});
-  [["search","🔍 搜尋"],["browse","📂 瀏覽"]].forEach(([t,l])=>
+  [["search","🔍 搜尋"],["strategy","📌 策略"],["browse","📂 瀏覽"]].forEach(([t,l])=>
     tabs.appendChild(el("button",{onClick:()=>{ST.tab=t;ST.sel=null;render();},
-      style:{flex:"1",padding:"13px 0",fontSize:"14px",fontWeight:"600",background:"transparent",border:"none",
+      style:{flex:"1",padding:"12px 0",fontSize:"13px",fontWeight:"600",background:"transparent",border:"none",
         borderBottom:`2px solid ${ST.tab===t?"#818cf8":"transparent"}`,
         color:ST.tab===t?"#a5b4fc":"#6b7280"}},l)));
   wrap.appendChild(tabs);
 
+  if(ST.tab==="strategy"){
+    wrap.appendChild(strategyPanel());
+    app.appendChild(wrap);
+    return;
+  }
+
   const cnt=el("div",{style:{padding:"16px 16px 60px"}});
 
+  // Strategy mini-banner (shown in search/browse)
+  const banner=el("div",{style:{display:"flex",gap:"6px",marginBottom:"14px",flexWrap:"wrap"}});
+  [{id:"cube",label:"CUBE",mode:"集精選",color:"#60a5fa"},{id:"unicard",label:"UNI",mode:"UP選",color:"#a3e635"},{id:"ricard",label:"TSB",mode:"玩旅刷",color:"#fbbf24"}].forEach(b=>
+    banner.appendChild(el("div",{onClick:()=>{ST.tab="strategy";render();},style:{display:"flex",alignItems:"center",gap:"5px",padding:"4px 10px",borderRadius:"10px",
+      background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",cursor:"pointer"}},
+      [el("span",{style:{fontSize:"11px",fontWeight:"700",color:b.color}},b.label),
+       el("span",{className:"mode-ok",style:{fontSize:"10px"}},b.mode)])));
+  banner.appendChild(el("div",{style:{fontSize:"11px",color:"#4b5563",alignSelf:"center",marginLeft:"auto"}},"非預設 ⚠"));
+  cnt.appendChild(banner);
+
   if(ST.tab==="search"){
-    // Input
     const iw=el("div",{style:{position:"relative",marginBottom:"14px"}});
-    const inp=el("input",{placeholder:"輸入消費場所（樂子、電信費、日本…）",
+    const inp=el("input",{placeholder:"輸入消費場所（樂子、星巴克、高鐵…）",
       style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.09)",
-        borderRadius:"14px",padding:"14px 115px 14px 16px",fontSize:"16px",color:"#e8eaf0",outline:"none"},
+        borderRadius:"14px",padding:"14px 110px 14px 16px",fontSize:"16px",color:"#e8eaf0",outline:"none"},
       value:ST.query});
     inp.addEventListener("input",e=>{ST.query=e.target.value;ST.sel=null;ST.llm=null;ST.results=ST.query.trim()?search(ST.query):[];render();});
     iw.appendChild(inp);
@@ -422,27 +565,24 @@ function render(){
       ST.loading?"⏳ AI中...":"🤖 AI搜尋"));
     cnt.appendChild(iw);
     if(!getKey())cnt.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginBottom:"12px"}},
-      ["🔑 AI搜尋需設定 API Key　",el("button",{onClick:()=>showKeyModal(doLLM),style:{fontSize:"12px",color:"#818cf8",background:"none",border:"none",textDecoration:"underline"}},"點此設定")]));
+      ["🔑 AI搜尋需設定 API Key ",el("button",{onClick:()=>showKeyModal(doLLM),style:{fontSize:"12px",color:"#818cf8",background:"none",border:"none",textDecoration:"underline"}},"點此設定")]));
 
     if(ST.sel){
       const bb=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px"}});
-      bb.appendChild(el("button",{onClick:()=>{ST.sel=null;render();},
-        style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:"10px",padding:"6px 14px",fontSize:"14px",color:"#9ca3af"}},"← 返回"));
+      bb.appendChild(el("button",{onClick:()=>{ST.sel=null;render();},style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:"10px",padding:"6px 14px",fontSize:"14px",color:"#9ca3af"}},"← 返回"));
       bb.appendChild(el("span",{style:{fontSize:"22px"}},ST.sel.icon));
       bb.appendChild(el("span",{style:{fontSize:"17px",fontWeight:"700"}},ST.sel.name));
       cnt.appendChild(bb);cnt.appendChild(spanel(ST.sel));
-    } else if(ST.results.length){
+    } else if(ST.results.length&&!ST.llm){
       cnt.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginBottom:"10px"}},`找到 ${ST.results.length} 個場域`));
       ST.results.forEach(s=>{
-        const btn=el("button",{onClick:()=>{ST.sel=s;render();},
-          style:{width:"100%",textAlign:"left",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",
-            borderRadius:"12px",padding:"13px 14px",display:"flex",alignItems:"center",gap:"12px",marginBottom:"7px"}});
+        const btn=el("button",{onClick:()=>{ST.sel=s;render();},style:{width:"100%",textAlign:"left",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"13px 14px",display:"flex",alignItems:"center",gap:"12px",marginBottom:"7px"}});
         btn.appendChild(el("span",{style:{fontSize:"24px"}},s.icon));
-        const t=el("div",{});
+        const t=el("div",{style:{flex:"1"}});
         t.appendChild(el("div",{style:{fontSize:"15px",color:"#e8eaf0",fontWeight:"600"}},s.name));
         t.appendChild(el("div",{style:{fontSize:"13px",color:"#6b7280",marginTop:"2px"}},s.group));
         btn.appendChild(t);
-        if(s.warn)btn.appendChild(el("span",{style:{marginLeft:"auto",fontSize:"16px"}},"⚠️"));
+        if(s.warn)btn.appendChild(el("span",{style:{fontSize:"16px"}},"⚠️"));
         cnt.appendChild(btn);
       });
     } else if(ST.query.trim()&&!ST.llm&&!ST.loading){
@@ -454,9 +594,9 @@ function render(){
     } else if(ST.loading){
       const ld=el("div",{style:{textAlign:"center",padding:"44px 0",color:"#6b7280"}});
       ld.appendChild(el("div",{style:{fontSize:"36px",marginBottom:"10px"}},"⏳"));
-      ld.appendChild(el("div",{style:{fontSize:"15px"}},"AI正在分析（含但書）..."));
+      ld.appendChild(el("div",{style:{fontSize:"15px"}},"AI正在分析..."));
       cnt.appendChild(ld);
-    } else if(ST.llm&&!ST.loading){
+    } else if(ST.llm){
       const ai=el("div",{});
       const ah=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px"}});
       ah.appendChild(document.createTextNode("🤖"));
@@ -464,7 +604,6 @@ function render(){
       ah.appendChild(el("button",{onClick:()=>{ST.llm=null;render();},style:{marginLeft:"auto",background:"none",border:"none",color:"#6b7280",fontSize:"22px"}},"×"));
       ai.appendChild(ah);
       if(ST.llm.notes)ai.appendChild(el("div",{className:"box",style:{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",color:"#fca5a5"}},`⚠ ${ST.llm.notes}`));
-      if(ST.llm.mall_tip)ai.appendChild(el("div",{className:"box",style:{background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.3)",color:"#fde68a"}},`✈ ${ST.llm.mall_tip}`));
       (ST.llm.recommendations||[]).forEach((r,i)=>{
         const row=el("div",{style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"13px 14px",marginBottom:"7px"}});
         const top=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"5px"}});
@@ -478,18 +617,17 @@ function render(){
       });
       cnt.appendChild(ai);
     } else {
-      const emp=el("div",{style:{textAlign:"center",padding:"36px 0"}});
-      emp.appendChild(el("div",{style:{fontSize:"48px",marginBottom:"14px"}},"✈️"));
+      const emp=el("div",{style:{textAlign:"center",padding:"30px 0"}});
+      emp.appendChild(el("div",{style:{fontSize:"44px",marginBottom:"12px"}},"✈️"));
       emp.appendChild(el("div",{style:{fontSize:"16px",color:"#6b7280",marginBottom:"6px"}},"輸入任意消費場所"));
-      emp.appendChild(el("div",{style:{fontSize:"14px",color:"#4b5563"}},"例：樂子、電信費、日本、保費、家樂福…"));
+      emp.appendChild(el("div",{style:{fontSize:"13px",color:"#4b5563"}},"例：樂子、星巴克、高鐵、家樂福…"));
       cnt.appendChild(emp);
     }
   } else {
-    // Browse
+    // browse
     if(ST.sel){
       const bb=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px"}});
-      bb.appendChild(el("button",{onClick:()=>{ST.sel=null;render();},
-        style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:"10px",padding:"6px 14px",fontSize:"14px",color:"#9ca3af"}},"← 返回"));
+      bb.appendChild(el("button",{onClick:()=>{ST.sel=null;render();},style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:"10px",padding:"6px 14px",fontSize:"14px",color:"#9ca3af"}},"← 返回"));
       bb.appendChild(el("span",{style:{fontSize:"22px"}},ST.sel.icon));
       bb.appendChild(el("span",{style:{fontSize:"17px",fontWeight:"700"}},ST.sel.name));
       cnt.appendChild(bb);cnt.appendChild(spanel(ST.sel));
@@ -497,8 +635,7 @@ function render(){
       GROUPS.forEach(group=>{
         const gd=el("div",{style:{marginBottom:"9px"}});
         const gb=el("button",{onClick:()=>{ST.expG=ST.expG===group.id?null:group.id;render();},
-          style:{width:"100%",textAlign:"left",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",
-            borderRadius:"14px",padding:"14px 16px",display:"flex",alignItems:"center",gap:"12px"}});
+          style:{width:"100%",textAlign:"left",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"14px",padding:"14px 16px",display:"flex",alignItems:"center",gap:"12px"}});
         gb.appendChild(el("span",{style:{fontSize:"24px"}},group.icon));
         gb.appendChild(el("span",{style:{fontSize:"16px",fontWeight:"700",color:"#e8eaf0"}},group.name));
         gb.appendChild(el("span",{style:{marginLeft:"auto",color:"#6b7280",fontSize:"18px"}},ST.expG===group.id?"▲":"▼"));
@@ -509,8 +646,7 @@ function render(){
             const scs=SCENARIOS.filter(s=>s.group===sub);if(!scs.length)return;
             const sd=el("div",{style:{marginBottom:"5px"}});
             const sb=el("button",{onClick:()=>{ST.expS=ST.expS===sub?null:sub;render();},
-              style:{width:"100%",textAlign:"left",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",
-                borderRadius:"12px",padding:"11px 14px",display:"flex",alignItems:"center",gap:"9px"}});
+              style:{width:"100%",textAlign:"left",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"12px",padding:"11px 14px",display:"flex",alignItems:"center",gap:"9px"}});
             sb.appendChild(el("span",{style:{fontSize:"13px",color:"#818cf8",fontWeight:"600"}},sub));
             sb.appendChild(el("span",{style:{fontSize:"12px",color:"#4b5563"}},`(${scs.length})`));
             sb.appendChild(el("span",{style:{marginLeft:"auto",color:"#6b7280",fontSize:"16px"}},ST.expS===sub?"▲":"▼"));
@@ -519,11 +655,10 @@ function render(){
               const sc2=el("div",{style:{marginTop:"5px",marginLeft:"10px"}});
               scs.forEach(s=>{
                 const btn=el("button",{onClick:()=>{ST.sel=s;render();},
-                  style:{width:"100%",textAlign:"left",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",
-                    borderRadius:"10px",padding:"10px 13px",display:"flex",alignItems:"center",gap:"10px",marginBottom:"5px"}});
+                  style:{width:"100%",textAlign:"left",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",padding:"10px 13px",display:"flex",alignItems:"center",gap:"10px",marginBottom:"5px"}});
                 btn.appendChild(el("span",{style:{fontSize:"20px"}},s.icon));
-                btn.appendChild(el("span",{style:{fontSize:"14px",color:"#d1d5db"}},s.name));
-                if(s.warn)btn.appendChild(el("span",{style:{fontSize:"12px",color:"#f59e0b",marginLeft:"auto"}},"⚠️"));
+                btn.appendChild(el("span",{style:{fontSize:"14px",color:"#d1d5db",flex:"1"}},s.name));
+                if(s.warn)btn.appendChild(el("span",{style:{fontSize:"12px",color:"#f59e0b"}},"⚠️"));
                 sc2.appendChild(btn);
               });sd.appendChild(sc2);
             }
@@ -533,21 +668,12 @@ function render(){
       });
     }
   }
-
-  cnt.appendChild(el("div",{style:{marginTop:"24px",padding:"12px 14px",background:"rgba(255,255,255,0.02)",borderRadius:"10px",fontSize:"12px",color:"#4b5563",lineHeight:"2"}},
-    "v3.2 · 2026/04 · 樂子：百大餐飲✓ · 電信費：六張卡均排除\nAI搜尋需在右下角🔑設定 Anthropic API Key"));
   wrap.appendChild(cnt);app.appendChild(wrap);
-
-  // FAB key button
   app.appendChild(el("button",{onClick:()=>showKeyModal(doLLM),style:{position:"fixed",bottom:"20px",right:"20px",
     width:"54px",height:"54px",borderRadius:"50%",
     background:getKey()?"rgba(99,102,241,0.9)":"rgba(99,102,241,0.4)",
     border:"none",fontSize:"24px",boxShadow:"0 4px 20px rgba(0,0,0,0.5)",zIndex:"50"}},"🔑"));
-
-  if(ST.tab==="search"){
-    const i2=app.querySelector("input");
-    if(i2)setTimeout(()=>{i2.focus();i2.setSelectionRange(ST.query.length,ST.query.length);},50);
-  }
+  if(ST.tab==="search"){const i2=app.querySelector("input");if(i2)setTimeout(()=>{i2.focus();i2.setSelectionRange(ST.query.length,ST.query.length);},50);}
 }
 render();
 </script>
