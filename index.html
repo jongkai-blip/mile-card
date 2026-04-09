@@ -38,6 +38,7 @@ const CARDS={
   cube:   {id:"cube",  short:"CUBE卡",color:"#60a5fa",bg:"rgba(96,165,250,0.1)",  tag:"CUBE"},
   unicard:{id:"unicard",short:"Unicard",color:"#a3e635",bg:"rgba(163,230,53,0.1)",tag:"UNI"},
   ricard: {id:"ricard",short:"Richart",color:"#fbbf24",bg:"rgba(251,191,36,0.1)", tag:"TSB"},
+  hsbc:   {id:"hsbc",  short:"匯豐旅人",color:"#e879f9",bg:"rgba(232,121,249,0.1)",tag:"HSBC"},
 };
 
 // ─── STRATEGY DEFINITION ─────────────────────────────────────
@@ -98,6 +99,11 @@ const R={
   uni_ww: {id:"unicard",text:"3.5%（王品瘋Pay）",score:8,note:"王品集團，需用王品瘋Pay App付款",method:"王品瘋Pay+任意選",mode:"任意選",warn:"⚠ 必須王品瘋Pay，非直刷或LINE Pay"},
   ri_33:  {id:"ricard",text:"3.3%",score:8,note:"玩旅刷：指定20+航空/旅行社（固定模式）",method:"玩旅刷",mode:"玩旅刷"},
   ri_2:   {id:"ricard",text:"≈2%",score:4,note:"一般消費，非固定策略通路",method:"天天刷",mode:"天天刷"},
+  // 匯豐旅人無限卡
+  hs_18:  {id:"hsbc",text:"18元/哩",score:5,note:"國內一般消費，入旅遊積分（無需切換方案）",method:"直刷",mode:null},
+  hs_10:  {id:"hsbc",text:"10元/哩",score:9,note:"海外消費（外幣計價即可，含網路交易）無上限",method:"直刷",mode:null},
+  hs_ins: {id:"hsbc",text:"18元/哩（保費✅）",score:6,note:"保費官方明確有回饋，不限金額，單筆≥NT$1,000",method:"直刷",mode:null},
+  hs_none:{id:"hsbc",text:"❌ 無回饋",score:0,note:"排除：繳費（水/電/稅/電信代扣）及分期付款消費",method:"—",mode:null},
 };
 
 // ─── SCENARIOS ────────────────────────────────────────────────
@@ -105,190 +111,198 @@ const SCENARIOS=[
   // 量販/超市
   {id:"pxmart",name:"全聯",icon:"🛒",group:"量販/超市",parent:"domestic",
    kw:["全聯","pxmart","px"],
-   rewards:[R.cb_2,R.ri_2,R.br_20,R.jx_20,R.ci_none,R.uni_none],
-   excl:"❌ 中信：排除全聯\n❌ Unicard：全聯非百大，無回饋",
+   rewards:[R.cb_2,R.hs_18,R.ri_2,R.br_20,R.jx_20,R.ci_none,R.uni_none],
+   excl:"❌ 中信：排除全聯\n❌ Unicard：全聯非百大，無回饋\n⚠ 匯豐旅人：18元/哩一般消費（但CUBE集精選2%更佳）",
    pay:[{m:"CUBE集精選（策略固定）",n:"需實體卡或PX Pay直刷；不可全支付"}],
-   tip:"CUBE「集精選」2%（策略固定）。六張卡唯一有效選項。"},
+   tip:"CUBE「集精選」2%（策略固定）唯一有效。匯豐旅人18元/哩可刷但不如2%划算。"},
   {id:"carrefour",name:"家樂福",icon:"🛒",group:"量販/超市",parent:"domestic",
    kw:["家樂福","carrefour"],
-   rewards:[R.uni_35,R.cb_33,R.ri_2,R.br_20,R.jx_20,R.ci_18],
-   tip:"Unicard 任意選第8家「家樂福」→3.5%直刷。"},
+   rewards:[R.uni_35,R.cb_33,R.hs_18,R.ri_2,R.br_20,R.jx_20,R.ci_18],
+   tip:"Unicard 任意選第8家「家樂福」→3.5%直刷最佳。"},
   // 超商
   {id:"seven",name:"7-ELEVEN",icon:"🏪",group:"四大超商",parent:"domestic",
    kw:["7-11","7eleven","711","統一超商"],
-   rewards:[R.cb_2,R.ri_2,R.br_20,R.jx_20,R.ci_none,R.uni_none],
-   excl:"❌ 中信：排除超商\n❌ Unicard：超商排除（行動支付也排除）",
+   rewards:[R.cb_2,R.hs_18,R.ri_2,R.br_20,R.jx_20,R.ci_none,R.uni_none],
+   excl:"❌ 中信：排除超商\n❌ Unicard：超商排除（行動支付也排除）\n⚠ 匯豐旅人18元/哩可刷超商（CUBE集精選2%仍較佳）",
    pay:[{m:"CUBE集精選（策略固定）",n:"2%無上限"},{m:"OpenPoint",n:"可疊加積點"}],
-   tip:"CUBE「集精選」2%（策略固定）。六張卡唯一超商有效。"},
+   tip:"CUBE「集精選」2%（策略固定）最佳。匯豐旅人18元/哩備用。"},
   {id:"family",name:"全家 FamilyMart",icon:"🏪",group:"四大超商",parent:"domestic",
    kw:["全家","familymart"],
-   rewards:[R.cb_2,R.ri_2,R.br_20,R.jx_20,R.ci_none,R.uni_none],
+   rewards:[R.cb_2,R.hs_18,R.ri_2,R.br_20,R.jx_20,R.ci_none,R.uni_none],
    excl:"❌ 中信：排除超商\n❌ Unicard：超商排除",
    pay:[{m:"CUBE集精選（策略固定）",n:"2%無上限"},{m:"FamilyPay",n:"可疊加Fa點"}],
-   tip:"CUBE「集精選」2%（策略固定）。"},
+   tip:"CUBE「集精選」2%最佳。匯豐旅人18元/哩備用。"},
   // 餐飲
   {id:"starbucks",name:"星巴克",icon:"☕",group:"餐飲",parent:"domestic",
    kw:["星巴克","starbucks"],
-   rewards:[R.uni_lp,R.cb_33,R.ri_2,R.ci_18,R.br_20,R.jx_20],
-   excl:"⚠ 星巴克不在Unicard百大餐飲！\n→ 任意選第1家是LINE Pay→星巴克用LINE Pay付→3.5%\n→ 直刷Unicard只有1%",
-   pay:[{m:"LINE Pay（任意選第1家）",n:"任意選選了LINE Pay→任何LINE Pay消費都是3.5%，包含星巴克"}],
-   tip:"用LINE Pay付款→Unicard任意選LINE Pay 3.5%。直刷Unicard只有1%！",
+   rewards:[R.uni_lp,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   excl:"⚠ 星巴克不在Unicard百大餐飲！\n→ 任意選第1家LINE Pay→星巴克用LINE Pay付→3.5%\n→ 直刷Unicard只有1%",
+   pay:[{m:"LINE Pay（任意選第1家）",n:"LINE Pay消費→3.5%，包含星巴克"}],
+   tip:"用LINE Pay付款→Unicard任意選3.5%最佳。匯豐旅人直刷18元/哩次選。",
    warn:"⚠ 星巴克直刷Unicard=1%！必須LINE Pay付款才有3.5%"},
   {id:"wangpin",name:"王品集團",icon:"🥩",group:"餐飲",parent:"domestic",
    kw:["王品","陶板屋","藝奇","西堤","品田牧場","夏慕尼","原燒","wangpin"],
-   rewards:[R.uni_ww,R.cb_33,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   rewards:[R.uni_ww,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
    excl:"⚠ 任意選第6家選「王品瘋Pay」\n→ 必須開王品App用王品瘋Pay付款→3.5%\n→ 直刷Unicard或LINE Pay不算王品瘋Pay類",
    pay:[{m:"王品瘋Pay（任意選第6家）",n:"開王品App→付款→王品瘋Pay→Unicard 3.5%"}],
-   tip:"必須用王品App的王品瘋Pay付款→Unicard任意選3.5%。",
+   tip:"必須用王品App的王品瘋Pay→Unicard任意選3.5%。匯豐旅人直刷18元/哩次選。",
    warn:"⚠ 王品直刷或LINE Pay不算王品瘋Pay！須開王品App"},
   {id:"wacheng",name:"瓦城集團",icon:"🍜",group:"餐飲",parent:"domestic",
    kw:["瓦城","非常泰","大心","1010湘","時時香","bobo","wacheng"],
-   rewards:[R.uni_35,R.cb_33,R.ri_2,R.ci_18,R.br_20,R.jx_20],
-   tip:"Unicard 任意選第7家「瓦城集團」→3.5%直刷。"},
+   rewards:[R.uni_35,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   tip:"Unicard 任意選第7家「瓦城集團」→3.5%直刷最佳。"},
   {id:"lezi",name:"樂子餐廳",icon:"🍳",group:"餐飲",parent:"domestic",
    kw:["樂子","lezi"],
-   rewards:[R.uni_35,R.cb_33,R.ri_2,R.ci_18,R.br_20,R.jx_20],
-   tip:"樂子在Unicard百大餐飲，但不在任意選8家中→退回1%基本。\n建議改用LINE Pay付→任意選LINE Pay 3.5%。",
-   warn:"⚠ 樂子雖在百大，但未列入任意選8家→直刷只有1%！用LINE Pay付才有3.5%"},
+   rewards:[R.uni_lp,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   tip:"樂子不在任意選8家→直刷Unicard只有1%！改LINE Pay付→3.5%。匯豐旅人直刷18元/哩次選。",
+   warn:"⚠ 樂子未列入任意選8家→直刷Unicard=1%！用LINE Pay付才有3.5%"},
   {id:"chain_rest",name:"其他連鎖（饗賓/鼎王/爭鮮等）",icon:"🍽️",group:"餐飲",parent:"domestic",
    kw:["饗食天堂","饗賓","旭集","乾杯","漢來","鼎王","爭鮮","定食8","饗饗"],
-   rewards:[R.uni_lp,R.cb_33,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   rewards:[R.uni_lp,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
    excl:"⚠ 這些餐廳不在任意選8家中\n→ 用LINE Pay付款→歸LINE Pay任意選→3.5%",
    pay:[{m:"LINE Pay（任意選第1家）",n:"改LINE Pay付→歸行動支付類3.5%"}],
    mall:{name:"長榮eShopping",note:"部分可在eShopping買禮券→刷長榮卡10元/哩",card:"eva"},
-   tip:"任意選8家未含這些餐廳，直刷只有1%。改用LINE Pay付款→3.5%。"},
+   tip:"任意選8家未含這些餐廳，改LINE Pay→3.5%。匯豐旅人直刷18元/哩次選。"},
   {id:"gen_rest",name:"速食（必勝客/麥當勞/KFC等）",icon:"🍔",group:"餐飲",parent:"domestic",
    kw:["必勝客","pizza hut","麥當勞","mcdonalds","kfc","肯德基","漢堡王","摩斯","subway"],
-   rewards:[R.uni_lp,R.cb_33,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   rewards:[R.uni_lp,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
    excl:"⚠ 速食不在任意選8家中，直刷Unicard只有1%\n→ 改LINE Pay付款→歸LINE Pay任意選→3.5%",
    pay:[{m:"LINE Pay（任意選第1家）",n:"速食支援LINE Pay→3.5%"}],
-   tip:"速食直刷Unicard=1%！改LINE Pay付款→任意選LINE Pay 3.5%。",
+   tip:"速食直刷Unicard=1%！改LINE Pay→任意選3.5%。匯豐旅人直刷18元/哩次選。",
    warn:"⚠ 速食直刷Unicard=1%，必須改LINE Pay"},
   {id:"delivery",name:"外送（UberEats/foodpanda）",icon:"🛵",group:"餐飲",parent:"domestic",
    kw:["uber eats","ubereats","foodpanda","外送"],
-   rewards:[R.uni_35,R.cb_33,R.ri_2,R.ci_18,R.br_20,R.jx_20],
-   tip:"Unicard 任意選第5家「Uber Eats」→3.5%直刷。foodpanda不在8家，改LINE Pay付3.5%。"},
+   rewards:[R.uni_35,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   tip:"Unicard 任意選第5家「Uber Eats」→3.5%直刷。foodpanda改LINE Pay付→3.5%。"},
   // 交通
   {id:"hsr",name:"高鐵",icon:"🚄",group:"交通",parent:"domestic",
    kw:["高鐵","thsr","台灣高鐵"],
-   rewards:[R.uni_35,R.cb_33,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   rewards:[R.uni_35,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
    pay:[{m:"直刷Unicard",n:"任意選第2家「高鐵」→直刷3.5%"}],
    tip:"Unicard 任意選第2家「高鐵」→3.5%直刷（策略固定）。"},
   {id:"tra",name:"台鐵",icon:"🚃",group:"交通",parent:"domestic",
    kw:["台鐵","tra","火車"],
-   rewards:[R.uni_35,R.cb_33,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   rewards:[R.uni_35,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
    tip:"Unicard 任意選第3家「台鐵」→3.5%直刷。"},
   {id:"uber_taxi",name:"Uber / 計程車",icon:"🚕",group:"交通",parent:"domestic",
    kw:["uber","計程車","yoxi","taxi"],
-   rewards:[R.uni_35,R.cb_33,R.ri_2,R.ci_18,R.br_20,R.jx_20],
-   tip:"Unicard 任意選第4家「Uber」→3.5%直刷（策略核心，每月6000元×3.5%=210點）。"},
+   rewards:[R.uni_35,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   tip:"Unicard 任意選第4家「Uber」→3.5%直刷（策略核心）。"},
   {id:"gas",name:"加油站（中油直營）",icon:"⛽",group:"交通",parent:"domestic",
    kw:["中油","加油"],
-   rewards:[R.cb_2,R.uni_1,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   rewards:[R.cb_2,R.hs_18,R.uni_1,R.ri_2,R.ci_18,R.br_20,R.jx_20],
    excl:"⚠ 中油未列入任意選8家→Unicard直刷只有1%\nCUBE集精選含中油直營→2%更佳",
-   tip:"中油用CUBE集精選2%（已含在集精選通路），比Unicard 1%更好。"},
+   tip:"中油CUBE集精選2%（策略固定）最佳。匯豐旅人18元/哩次選。"},
   // 電信/帳單
   {id:"telecom",name:"電信費（手機月費）",icon:"📱",group:"電信/帳單",parent:"domestic",
    kw:["中華電信","台灣大哥大","台哥大","遠傳","電信費","手機費"],
-   rewards:[R.ri_2,R.cb_003,R.jx_none,R.br_none,R.ci_none,R.uni_none],
-   excl:"❌ 玉山（含星宇世界卡）官方公告排除「中華電信及民營電信」→零哩程\n❌ 中信：排除電信費\n❌ Unicard：非一般消費\n⚠ CUBE：不在任何方案，0.3%",
-   tip:"六張卡均無哩程。Richart天天刷約2%為最高。",
-   warn:"⚠ 電信費：六張卡均無哩程！任何支付方式均無效"},
+   rewards:[R.ri_2,R.cb_003,R.hs_none,R.jx_none,R.br_none,R.ci_none,R.uni_none],
+   excl:"❌ 玉山（含星宇世界卡）官方排除「中華電信及民營電信」→零哩程\n❌ 中信：排除電信費\n❌ Unicard：非一般消費\n❌ 匯豐旅人：電信費代扣屬繳費類→無回饋\n⚠ CUBE：不在任何方案，0.3%",
+   tip:"七張卡均無哩程！Richart天天刷約2%為最高。",
+   warn:"⚠ 電信費：七張卡均無哩程！匯豐旅人電信費代扣亦無回饋"},
   {id:"utility",name:"水電費/政府規費",icon:"💡",group:"電信/帳單",parent:"domestic",
    kw:["台電","水費","電費","瓦斯","稅款","牌照稅","健保費"],
-   rewards:[R.ri_2,R.cb_003,R.jx_none,R.br_none,R.ci_none,R.uni_none],
-   warn:"⚠ 水電/政府規費幾乎無回饋",
-   tip:"水電費建議最方便方式繳，六張卡均無哩程。"},
+   rewards:[R.ri_2,R.cb_003,R.hs_none,R.jx_none,R.br_none,R.ci_none,R.uni_none],
+   excl:"❌ 匯豐旅人：官方確認水電費/稅費繳費類無回饋",
+   warn:"⚠ 水電/政府規費：七張卡均無哩程",
+   tip:"水電費建議最方便方式繳，均無哩程。"},
   {id:"insurance",name:"保費（壽險/產險）",icon:"🛡️",group:"電信/帳單",parent:"domestic",
    kw:["保費","壽險","產險","保險"],
-   rewards:[R.ci_18,R.jx_20,R.ri_33,R.cb_ins,R.uni_1,R.br_ins],
-   excl:"❌ 長榮無限卡：官方明確排除保費！\n⚠ CUBE：需App領券才1.2%（集精選外）\n⚠ Unicard：保費非百大，只有1%",
-   tip:"保費最佳：中信華航18元/哩（不排除保費）；Richart玩旅刷3.3%次選。",
-   warn:"⚠ 長榮無限卡排除保費！"},
+   rewards:[R.hs_ins,R.ci_18,R.jx_20,R.ri_33,R.cb_ins,R.uni_1,R.br_ins],
+   excl:"✅ 匯豐旅人無限卡：官方明確「刷保費享旅遊積分回饋，不限金額，單筆≥NT$1,000」\n✅ 中信華航：保費不排除（18元/哩）\n❌ 長榮無限卡：官方明確排除保費！\n⚠ CUBE：需App領券才1.2%（月限1000點）",
+   tip:"保費最佳：匯豐旅人無限卡（18元/哩，可換16+家，無腦刷）或中信華航（18元/哩，入華夏）。",
+   warn:"⚠ 長榮無限卡排除保費！請勿用長榮卡繳保費"},
   {id:"streaming",name:"串流訂閱（Netflix/Spotify等）",icon:"📺",group:"電信/帳單",parent:"domestic",
    kw:["netflix","spotify","disney+","youtube premium","apple music","kkbox","max"],
-   rewards:[R.uni_lp,R.cb_003,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   rewards:[R.uni_lp,R.hs_18,R.cb_003,R.ri_2,R.ci_18,R.br_20,R.jx_20],
    excl:"⚠ CUBE已固定集精選，串流（玩數位）不在集精選中→改刷Unicard\n→ 串流支援LINE Pay→任意選LINE Pay 3.5%",
    pay:[{m:"LINE Pay+Unicard任意選",n:"Netflix/Spotify等支援LINE Pay自動扣款→3.5%"}],
-   tip:"CUBE已固定集精選（不含串流）。串流改LINE Pay付款→Unicard任意選3.5%。",
-   warn:"⚠ 策略提醒：CUBE集精選不含串流，請改刷Unicard（LINE Pay 3.5%）"},
+   tip:"CUBE集精選不含串流。串流改LINE Pay付款→Unicard任意選3.5%最佳。匯豐旅人18元/哩次選。",
+   warn:"⚠ CUBE集精選不含串流，請改Unicard（LINE Pay 3.5%）"},
   // 網購
   {id:"shopee",name:"蝦皮購物",icon:"🛍️",group:"網購",parent:"domestic",
    kw:["shopee","蝦皮"],
-   rewards:[R.uni_lp,R.cb_003,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   rewards:[R.uni_lp,R.hs_18,R.cb_003,R.ri_2,R.ci_18,R.br_20,R.jx_20],
    excl:"⚠ 蝦皮未列入任意選8家→直刷Unicard只有1%\n→ 改LINE Pay付→任意選LINE Pay 3.5%",
-   tip:"蝦皮用LINE Pay付款→Unicard任意選LINE Pay 3.5%。",
+   tip:"蝦皮用LINE Pay付款→Unicard任意選3.5%。匯豐旅人18元/哩次選。",
    warn:"⚠ 蝦皮直刷Unicard=1%，改LINE Pay"},
   {id:"momo",name:"momo購物",icon:"🛍️",group:"網購",parent:"domestic",
    kw:["momo"],
-   rewards:[R.uni_lp,R.cb_003,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   rewards:[R.uni_lp,R.hs_18,R.cb_003,R.ri_2,R.ci_18,R.br_20,R.jx_20],
    excl:"⚠ momo未在任意選8家→改LINE Pay付→3.5%",
-   tip:"momo用LINE Pay付款→Unicard任意選LINE Pay 3.5%。"},
+   tip:"momo用LINE Pay付款→Unicard任意選3.5%。匯豐旅人18元/哩次選。"},
   {id:"apple",name:"Apple Store",icon:"🍎",group:"網購",parent:"domestic",
    kw:["apple store","iphone","ipad","mac","蘋果"],
-   rewards:[R.uni_lp,R.ri_2,R.ci_18,R.cb_003,R.br_20,R.jx_20],
+   rewards:[R.uni_lp,R.hs_18,R.ri_2,R.ci_18,R.cb_003,R.br_20,R.jx_20],
    excl:"⚠ Apple直營未在任意選8家→改LINE Pay付→3.5%",
-   tip:"Apple Store用LINE Pay→Unicard任意選3.5%。（大額購機3.5%無上限）"},
+   tip:"Apple Store用LINE Pay→Unicard任意選3.5%。匯豐旅人18元/哩次選。"},
   // 百貨/購物
   {id:"dept",name:"百貨公司（新光三越/SOGO等）",icon:"🏬",group:"百貨/購物",parent:"domestic",
    kw:["sogo","新光三越","微風","台北101","統一時代","誠品","lalaport","漢神"],
-   rewards:[R.uni_lp,R.cb_33,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   rewards:[R.uni_lp,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
    excl:"⚠ 百貨未在任意選8家→改LINE Pay付→3.5%（CUBE已固定集精選）",
-   tip:"百貨公司用LINE Pay付款→Unicard任意選3.5%。"},
+   tip:"百貨公司用LINE Pay付款→Unicard任意選3.5%最佳。匯豐旅人18元/哩次選。"},
   {id:"drug",name:"藥妝/藥局",icon:"💊",group:"百貨/購物",parent:"domestic",
    kw:["屈臣氏","康是美","大樹藥局","丁丁藥妝","藥局","watsons"],
-   rewards:[R.uni_lp,R.cb_2,R.ri_2,R.ci_18,R.br_20,R.jx_20],
-   tip:"藥妝：Unicard LINE Pay 3.5%，或CUBE集精選2%（集精選含藥局）。"},
+   rewards:[R.uni_lp,R.cb_2,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   tip:"藥妝：Unicard LINE Pay 3.5%或CUBE集精選2%（集精選含藥局）。匯豐旅人18元/哩次選。"},
   // 航空
   {id:"jx_ticket",name:"星宇航空購票",icon:"🌟",group:"航空購票",parent:"airline",
    kw:["星宇","starlux","jx"],
-   rewards:[R.jx_sp,R.uni_lp,R.cb_33,R.ri_33,R.br_20,R.ci_18],
+   rewards:[R.jx_sp,R.hs_18,R.uni_lp,R.cb_33,R.ri_33,R.br_20,R.ci_18],
    mall:{name:"星宇 béshopping",note:"官網/App購票=指定通路10元/哩雙倍+9折",card:"starlux"},
-   tip:"星宇世界卡首選：10元/哩雙倍。"},
+   tip:"星宇世界卡首選：10元/哩雙倍。匯豐旅人18元/哩次選（可換16+家航空，更靈活）。"},
   {id:"eva_ticket",name:"長榮航空購票",icon:"💚",group:"航空購票",parent:"airline",
    kw:["長榮","eva air","eva"],
-   rewards:[R.br_sp,R.uni_lp,R.cb_33,R.ri_33,R.jx_20,R.ci_18],
+   rewards:[R.br_sp,R.hs_18,R.uni_lp,R.cb_33,R.ri_33,R.jx_20,R.ci_18],
    mall:{name:"長榮 eShopping",note:"透過eShopping購物+刷長榮卡，雙重積哩",card:"eva"},
-   tip:"長榮無限卡首選：10元/哩直入Infinity。"},
+   tip:"長榮無限卡首選：10元/哩直入Infinity。匯豐旅人18元/哩次選。"},
   {id:"ci_ticket",name:"華航購票",icon:"❤️",group:"航空購票",parent:"airline",
    kw:["華航","中華航空","china airlines"],
-   rewards:[R.ci_9,R.uni_lp,R.cb_33,R.ri_33,R.jx_20,R.br_20],
+   rewards:[R.ci_9,R.hs_18,R.uni_lp,R.cb_33,R.ri_33,R.jx_20,R.br_20],
    mall:{name:"華航 eMall",note:"華航eMall/免稅品=指定消費9元/哩",card:"ci"},
-   tip:"中信華航鼎尊首選：9元/哩直入華夏。"},
+   tip:"中信華航鼎尊首選：9元/哩直入華夏。匯豐旅人18元/哩次選（2026/4/1起華航1:1兌換）。"},
   {id:"other_airline",name:"其他航空（JAL/ANA/新航等）",icon:"✈️",group:"航空購票",parent:"airline",
-   kw:["日航","jal","ana","全日空","新航","singapore airlines","國泰航空","cathay","虎航","樂桃","酷航","越捷"],
-   rewards:[R.ri_33,R.cb_33,R.uni_lp,R.jx_20,R.br_20,R.ci_18],
-   tip:"Richart玩旅刷3.3%（策略固定）。這些航空無聯名卡，Richart最划算。"},
+   kw:["日航","jal","ana","全日空","新航","singapore airlines","國泰航空","cathay","虎航","樂桃","酷航","越捷","美聯航","阿聯酋","澳航","卡達"],
+   rewards:[R.ri_33,R.hs_18,R.cb_33,R.uni_lp,R.jx_20,R.br_20,R.ci_18],
+   excl:"★ 匯豐旅人：可換16+家包含JAL/ANA/新航/國泰/阿聯酋/澳航/卡達/越南/美聯航，且即時入哩（除華航/新航/日航/海南外）",
+   tip:"Richart玩旅刷3.3%（策略固定）。另：匯豐旅人18元/哩可換更多航空，且支援即時入哩（搶限時機票利器）。"},
   {id:"travel_co",name:"旅行社（雄獅/易遊等）",icon:"🗺️",group:"航空購票",parent:"airline",
    kw:["雄獅","易遊網","東南旅遊","可樂旅遊","五福","eztravel","鳳凰","山富","長汎"],
-   rewards:[R.ri_33,R.br_sp,R.uni_lp,R.cb_33,R.ci_9,R.jx_20],
-   tip:"Richart玩旅刷3.3%（策略固定，涵蓋主要旅行社）。"},
+   rewards:[R.ri_33,R.hs_18,R.br_sp,R.uni_lp,R.cb_33,R.ci_9,R.jx_20],
+   tip:"Richart玩旅刷3.3%（策略固定）。匯豐旅人18元/哩次選。"},
   // 旅遊
   {id:"hotel",name:"旅遊訂房（Agoda/Booking/Expedia）",icon:"🏨",group:"旅遊",parent:"travel",
    kw:["agoda","booking","expedia","hotels.com","訂房","飯店"],
-   rewards:[R.br_exp,R.ci_9,R.uni_lp,R.cb_33,R.ri_33,R.jx_20],
-   tip:"長榮無限卡Expedia訂房8元/哩最優！中信華航訂房9元/哩；Agoda改LINE Pay→Unicard 3.5%。"},
+   rewards:[R.br_exp,R.ci_9,R.hs_18,R.uni_lp,R.cb_33,R.ri_33,R.jx_20],
+   tip:"長榮無限卡Expedia訂房8元/哩最優！中信華航9元/哩次選；匯豐旅人18元/哩可換更多飯店集團（萬豪/IHG/雅高）。"},
   {id:"klook",name:"Klook / KKday",icon:"🎢",group:"旅遊",parent:"travel",
    kw:["klook","kkday","旅遊活動"],
-   rewards:[R.uni_lp,R.cb_33,R.ri_33,R.ci_18,R.br_20,R.jx_20],
-   tip:"Klook/KKday改LINE Pay→Unicard任意選3.5%。"},
-  // 海外 (用星宇卡)
+   rewards:[R.uni_lp,R.hs_18,R.cb_33,R.ri_33,R.ci_18,R.br_20,R.jx_20],
+   tip:"Klook/KKday改LINE Pay→Unicard任意選3.5%最佳。匯豐旅人18元/哩次選。"},
+  // 海外
   {id:"japan",name:"日本 實體消費",icon:"🗾",group:"海外－日本",parent:"overseas",
    kw:["日本","japan","東京","大阪","京都","北海道","沖繩","名古屋","福岡"],
-   rewards:[R.jx_10,R.ci_9,
+   rewards:[R.jx_10,R.hs_10,R.ci_9,
      {id:"cube",text:"3%（趣旅遊）",score:8,note:"出國前臨時切換CUBE趣旅遊（策略例外）",method:"趣旅遊",mode:"出國例外"},
      R.br_sp,R.uni_1,R.ri_2],
-   excl:"📌 策略建議：出國優先刷星宇世界卡（10元/哩，海外全通路）\n→ CUBE出國前可臨時切趣旅遊3%，回國後切回集精選",
-   tip:"出國首選：星宇世界卡10元/哩（全海外通路，不需選方案）。"},
+   excl:"📌 出國首選：星宇世界卡10元/哩 或 匯豐旅人10元/哩（依想累積哪家哩程決定）\n匯豐旅人特色：可換16+家航空，支援即時入哩",
+   tip:"出國首選：星宇世界卡10元/哩（入COSMILE）或匯豐旅人10元/哩（換16+家）；中信華航9元/哩次選。"},
   {id:"eu",name:"歐洲EU 實體消費",icon:"🏰",group:"海外－歐洲",parent:"overseas",
    kw:["歐洲","法國","德國","義大利","英國","西班牙","歐盟","荷蘭"],
-   rewards:[R.jx_10,R.ci_9,R.cb_eu,R.ri_33,R.br_sp,R.uni_eu],
-   excl:"✓ 星宇世界卡：玉山官方公告聯名卡歐洲實體有回饋（10元/哩）\n✓ 中信華航鼎尊：不擋EU（9元/哩）",
-   tip:"歐洲首選：星宇世界卡10元/哩（聯名卡不擋EU）；中信華航9元/哩。"},
+   rewards:[R.jx_10,R.hs_10,R.ci_9,R.cb_eu,R.ri_33,R.br_sp,R.uni_eu],
+   excl:"✓ 星宇世界卡：聯名卡歐洲實體有回饋（10元/哩）\n✓ 匯豐旅人：外幣計價即可，歐洲實體/網路均10元/哩\n✓ 中信華航鼎尊：不擋EU（9元/哩）",
+   tip:"歐洲首選：星宇世界卡或匯豐旅人（均10元/哩）；中信華航9元/哩次選。"},
   {id:"sea",name:"東南亞/韓國 實體",icon:"🌴",group:"海外－亞洲",parent:"overseas",
    kw:["泰國","韓國","越南","印尼","菲律賓","馬來西亞","新加坡","曼谷","首爾","峇里"],
-   rewards:[R.jx_10,R.ci_9,R.cb_eu,R.br_sp,R.uni_1,R.ri_2],
-   tip:"海外首選星宇世界卡10元/哩；中信華航9元/哩次選。"},
+   rewards:[R.jx_10,R.hs_10,R.ci_9,R.cb_eu,R.br_sp,R.uni_1,R.ri_2],
+   tip:"海外首選：星宇世界卡或匯豐旅人（均10元/哩）；中信華航9元/哩次選。"},
+  {id:"intl_online",name:"海外網站購物（外幣）",icon:"🌐",group:"海外－美洲",parent:"overseas",
+   kw:["amazon","rakuten","ebay","海外網購","外幣網購"],
+   rewards:[R.hs_10,R.jx_10,R.br_sp,R.ri_33,R.cb_eu,R.ci_18,R.uni_1],
+   excl:"★ 匯豐旅人：外幣計價即可，網路交易同樣10元/哩（這是優勢！）\n❌ 中信華航：2024/10後海外網購無雙倍，退回18元/哩",
+   tip:"海外網購首選：匯豐旅人10元/哩（外幣計價均有，最方便）；星宇世界卡10元/哩次選。",
+   warn:"⚠ 中信華航海外網購已無9元/哩！"},
 ];
 
 // search index
@@ -308,7 +322,7 @@ const GROUPS=[
   {id:"domestic",name:"國內消費",icon:"🇹🇼",subs:["量販/超市","四大超商","餐飲","交通","電信/帳單","網購","百貨/購物"]},
   {id:"airline", name:"航空相關",icon:"✈️", subs:["航空購票"]},
   {id:"travel",  name:"旅遊",    icon:"🗺️", subs:["旅遊"]},
-  {id:"overseas",name:"海外消費",icon:"🌍", subs:["海外－日本","海外－亞洲","海外－歐洲"]},
+  {id:"overseas",name:"海外消費",icon:"🌍", subs:["海外－日本","海外－亞洲","海外－歐洲","海外－美洲"]},
 ];
 
 const getKey=()=>localStorage.getItem("ant_key")||"";
@@ -316,12 +330,11 @@ const setKey=k=>localStorage.setItem("ant_key",k);
 
 async function queryLLM(q){
   const key=getKey();if(!key)throw new Error("NO_KEY");
-  const sys=`你是台灣信用卡哩程優化助理。用戶持6張卡，已採用固定策略：
+  const sys=`你是台灣信用卡哩程優化助理。用戶持7張卡，已採用固定策略：
 CUBE→集精選（超商/全聯2%），Unicard→任意選8家（LINE Pay/高鐵/台鐵/Uber/UberEats/王品瘋Pay/瓦城集團/家樂福，均3.5%），Richart→玩旅刷（非JX/BR/CI航空及旅行社3.3%）
-其他3張：星宇世界卡（國內20/海外10/指定10×2），長榮無限卡（20/10/Expedia訂房8，排除保費），中信華航鼎尊（18/海外實體9，排除電信超商全聯稅費，保費可刷）
-重要：出國用星宇卡10元/哩；Unicard任意選8家外直刷=1%，改LINE Pay=3.5%；王品必須王品瘋Pay；星巴克必須LINE Pay
-電信費六張卡均無哩程；超商/全聯只有CUBE集精選2%
-Unicard UP選=月費149點，用戶每月Uber只有6000元，任意選比UP選划算89點
+其他4張：星宇世界卡（國內20/海外10/指定10×2），長榮無限卡（20/10/Expedia訂房8，排除保費），中信華航鼎尊（18/海外實體9，排除電信超商全聯稅費，保費可刷）
+匯豐旅人無限卡：國內18元/哩，海外（含網路交易外幣計價）10元/哩，無上限，無腦刷。✅保費有回饋（官方明確）✅海外含網路❌排除繳費類（水電/稅/電信代扣）❌分期無回饋
+重要：電信費七張卡均無哩程；超商/全聯只有CUBE集精選2%；Unicard任意選8家外直刷=1%，改LINE Pay=3.5%；王品必須王品瘋Pay；星巴克必須LINE Pay；保費推薦匯豐旅人18元/哩（長榮排除保費）；海外網購首選匯豐旅人10元/哩（最方便，含網路）
 針對「${q}」，考慮用戶策略後，JSON推薦（不含代碼塊）：
 {"category":"類別","recommendations":[{"rank":1,"card":"卡名","payment":"方式","reward":"回饋","reason":"說明含策略模式"}],"notes":"重要但書","mall_tip":null}`;
   const resp=await fetch("https://api.anthropic.com/v1/messages",{
@@ -498,12 +511,17 @@ function strategyPanel(){
   // Exception
   div.appendChild(el("div",{className:"box",style:{background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.25)",color:"#a5b4fc"}},
     [el("span",{style:{fontWeight:"700",display:"block",marginBottom:"4px"}},"🌍 出國例外"),
-     document.createTextNode("出國前將CUBE臨時切換「趣旅遊」3%（全球含EU）；回國後切回集精選。海外首選：星宇世界卡10元/哩（不需切換方案）。")]));
+     document.createTextNode("出國前將CUBE臨時切換「趣旅遊」3%（全球含EU）；回國後切回集精選。\n海外首選：星宇世界卡10元/哩（入COSMILE） 或 匯豐旅人10元/哩（換16+家航空）→ 依目標哩程決定。")]));
 
-  // Richart scope clarification
+  // HSBC highlight
+  div.appendChild(el("div",{className:"box",style:{background:"rgba(232,121,249,0.08)",border:"1px solid rgba(232,121,249,0.3)",color:"#f5d0fe"}},
+    [el("span",{style:{fontWeight:"700",display:"block",marginBottom:"4px"}},"🆕 匯豐旅人無限卡 — 無腦刷彈性換哩"),
+     document.createTextNode("✅ 保費18元/哩（官方明確有回饋，長榮卡排除保費）\n✅ 海外網購10元/哩（外幣計價即可，中信2024/10後只有18元/哩）\n✅ 即時入哩（除華航/新航/日航/海南，App秒換哩，搶限時機票）\n✅ 可換16+家：長榮/亞萬/國泰/JAL/ANA/新航/阿聯酋/澳航/卡達/越南/美聯航等\n❌ 水電費/稅費/電信代扣/分期付款 → 無回饋\n⚠ 年費NT$8,000固定，無法免年費")]));
+
+  // Richart scope
   div.appendChild(el("div",{className:"box",style:{background:"rgba(251,191,36,0.06)",border:"1px solid rgba(251,191,36,0.25)",color:"#fde68a"}},
     [el("span",{style:{fontWeight:"700",display:"block",marginBottom:"4px"}},"✈ Richart 玩旅刷 使用場景"),
-     document.createTextNode("專用於購買 JAL/ANA/新加坡航空/國泰航空/樂桃/酷航等（沒有持有聯名卡的航空）及雄獅/易遊等旅行社。\n不出國→星宇世界卡10元/哩已涵蓋全海外，Richart不需要出國刷。")]));
+     document.createTextNode("專用購買 JAL/ANA/新加坡航空/國泰/樂桃/酷航等（無持有聯名卡的航空）及雄獅/易遊等旅行社。\n不出國→星宇世界卡或匯豐旅人已涵蓋全海外，Richart不需要出國刷。")]));
   return div;
 }
 
@@ -547,9 +565,9 @@ function render(){
 
   // Header
   const hdr=el("div",{style:{padding:"20px 18px 14px",background:"linear-gradient(160deg,#0e1524,#111827)"}});
-  hdr.appendChild(el("div",{style:{fontSize:"11px",letterSpacing:"4px",color:"#6b7280",textTransform:"uppercase",marginBottom:"4px"}},"Mileage Optimizer v3.4"));
+  hdr.appendChild(el("div",{style:{fontSize:"11px",letterSpacing:"4px",color:"#6b7280",textTransform:"uppercase",marginBottom:"4px"}},"Mileage Optimizer v3.5"));
   hdr.appendChild(el("div",{style:{fontSize:"22px",fontWeight:"700"}},"哩程刷卡智慧助理"));
-  hdr.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginTop:"3px"}},"任意選免費 > UP選・Richart專攻國內非聯名航空"));
+  hdr.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginTop:"3px"}},"7張卡 · 匯豐旅人無限卡加入 · 官方但書核對"));
   wrap.appendChild(hdr);
 
   // Tabs
