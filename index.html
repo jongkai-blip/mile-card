@@ -50,8 +50,8 @@ const UNI_8_STORES=[
   {no:4,name:"Uber",    category:"交通",    note:"計程車/Uber",icon:"🚕"},
   {no:5,name:"Uber Eats",category:"餐飲",  note:"外送平台",icon:"🛵"},
   {no:6,name:"王品瘋Pay",category:"餐飲",  note:"王品/陶板屋/西堤等，需用王品瘋Pay付款",icon:"🥩",warn:"需用王品瘋Pay App，不是直刷或LINE Pay"},
-  {no:7,name:"瓦城集團",category:"餐飲",   note:"瓦城/非常泰/大心/1010湘等",icon:"🍜"},
-  {no:8,name:"家樂福",  category:"量販",    note:"家樂福量販/超市",icon:"🛒"},
+  {no:7,name:"蝦皮購物",category:"電商",   note:"蝦皮直刷Unicard→3.5%，無需開LINE Pay",icon:"🛍️"},
+  {no:8,name:"momo購物網",category:"電商", note:"momo直刷Unicard→3.5%，大額網購更方便",icon:"📦"},
 ];
 
 const STRATEGY={
@@ -61,7 +61,7 @@ const STRATEGY={
     note:"超商/全聯是其他五張卡完全排除的通路，集精選是唯一選擇",color:"#60a5fa"},
   unicard:{card:"unicard",target:"任意選（8家）",defaultMode:"簡單選（預設）",
     action:"玉山Wallet → 方案管理 → 任意選 → 選擇以下8家→每月月底前確認勿變更",
-    covers:["LINE Pay","高鐵","台鐵","Uber","Uber Eats","王品瘋Pay","瓦城集團","家樂福"],
+    covers:["LINE Pay","高鐵","台鐵","Uber","Uber Eats","王品瘋Pay","蝦皮購物","momo購物網"],
     reward:"3.5% e point（含1%基本）",
     note:"每月 Unicard 百大消費 < NT$14,900 時，任意選比UP選划算（免月費149點）",color:"#a3e635"},
   ricard:{card:"ricard",target:"玩旅刷",defaultMode:"天天刷（預設）",
@@ -117,8 +117,9 @@ const SCENARIOS=[
    tip:"CUBE「集精選」2%（策略固定）唯一有效。匯豐旅人18元/哩可刷但不如2%划算。"},
   {id:"carrefour",name:"家樂福",icon:"🛒",group:"量販/超市",parent:"domestic",
    kw:["家樂福","carrefour"],
-   rewards:[R.uni_35,R.cb_33,R.hs_18,R.ri_2,R.br_20,R.jx_20,R.ci_18],
-   tip:"Unicard 任意選第8家「家樂福」→3.5%直刷最佳。"},
+   rewards:[R.uni_lp,R.cb_33,R.hs_18,R.ri_2,R.br_20,R.jx_20,R.ci_18],
+   excl:"⚠ 家樂福已不在任意選8家中（改為蝦皮/momo）\n→ 改用LINE Pay付款→歸LINE Pay任意選→3.5%",
+   tip:"家樂福不在任意選8家，改用LINE Pay付款→3.5%。匯豐旅人直刷18元/哩次選。"},
   // 超商
   {id:"seven",name:"7-ELEVEN",icon:"🏪",group:"四大超商",parent:"domestic",
    kw:["7-11","7eleven","711","統一超商"],
@@ -149,8 +150,10 @@ const SCENARIOS=[
    warn:"⚠ 王品直刷或LINE Pay不算王品瘋Pay！須開王品App"},
   {id:"wacheng",name:"瓦城集團",icon:"🍜",group:"餐飲",parent:"domestic",
    kw:["瓦城","非常泰","大心","1010湘","時時香","bobo","wacheng"],
-   rewards:[R.uni_35,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
-   tip:"Unicard 任意選第7家「瓦城集團」→3.5%直刷最佳。"},
+   rewards:[R.uni_lp,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   excl:"⚠ 瓦城已不在任意選8家中（改為蝦皮/momo）\n→ 改用LINE Pay付款→歸LINE Pay任意選→3.5%",
+   pay:[{m:"LINE Pay（任意選第1家）",n:"瓦城支援LINE Pay→歸行動支付類3.5%"}],
+   tip:"瓦城不在任意選8家，直刷Unicard只有1%！改用LINE Pay付款→3.5%。"},
   {id:"lezi",name:"樂子餐廳",icon:"🍳",group:"餐飲",parent:"domestic",
    kw:["樂子","lezi"],
    rewards:[R.uni_lp,R.cb_33,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
@@ -222,15 +225,12 @@ const SCENARIOS=[
   // 網購
   {id:"shopee",name:"蝦皮購物",icon:"🛍️",group:"網購",parent:"domestic",
    kw:["shopee","蝦皮"],
-   rewards:[R.uni_lp,R.hs_18,R.cb_003,R.ri_2,R.ci_18,R.br_20,R.jx_20],
-   excl:"⚠ 蝦皮未列入任意選8家→直刷Unicard只有1%\n→ 改LINE Pay付→任意選LINE Pay 3.5%",
-   tip:"蝦皮用LINE Pay付款→Unicard任意選3.5%。匯豐旅人18元/哩次選。",
-   warn:"⚠ 蝦皮直刷Unicard=1%，改LINE Pay"},
-  {id:"momo",name:"momo購物",icon:"🛍️",group:"網購",parent:"domestic",
-   kw:["momo"],
-   rewards:[R.uni_lp,R.hs_18,R.cb_003,R.ri_2,R.ci_18,R.br_20,R.jx_20],
-   excl:"⚠ momo未在任意選8家→改LINE Pay付→3.5%",
-   tip:"momo用LINE Pay付款→Unicard任意選3.5%。匯豐旅人18元/哩次選。"},
+   rewards:[R.uni_35,R.hs_18,R.cb_003,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   tip:"Unicard 任意選第7家「蝦皮購物」→直刷3.5%（策略固定，無需LINE Pay）。"},
+  {id:"momo",name:"momo購物",icon:"📦",group:"網購",parent:"domestic",
+   kw:["momo","富邦媒體"],
+   rewards:[R.uni_35,R.hs_18,R.cb_003,R.ri_2,R.ci_18,R.br_20,R.jx_20],
+   tip:"Unicard 任意選第8家「momo購物網」→直刷3.5%（策略固定，大額網購直刷更方便）。"},
   {id:"apple",name:"Apple Store",icon:"🍎",group:"網購",parent:"domestic",
    kw:["apple store","iphone","ipad","mac","蘋果"],
    rewards:[R.uni_lp,R.hs_18,R.ri_2,R.ci_18,R.cb_003,R.br_20,R.jx_20],
@@ -331,7 +331,7 @@ const setKey=k=>localStorage.setItem("ant_key",k);
 async function queryLLM(q){
   const key=getKey();if(!key)throw new Error("NO_KEY");
   const sys=`你是台灣信用卡哩程優化助理。用戶持7張卡，已採用固定策略：
-CUBE→集精選（超商/全聯2%），Unicard→任意選8家（LINE Pay/高鐵/台鐵/Uber/UberEats/王品瘋Pay/瓦城集團/家樂福，均3.5%），Richart→玩旅刷（非JX/BR/CI航空及旅行社3.3%）
+CUBE→集精選（超商/全聯2%），Unicard→任意選8家（LINE Pay/高鐵/台鐵/Uber/UberEats/王品瘋Pay/蝦皮購物/momo購物網，均3.5%），Richart→玩旅刷（非JX/BR/CI航空及旅行社3.3%）
 其他4張：星宇世界卡（國內20/海外10/指定10×2），長榮無限卡（20/10/Expedia訂房8，排除保費），中信華航鼎尊（18/海外實體9，排除電信超商全聯稅費，保費可刷）
 匯豐旅人無限卡：國內18元/哩，海外（含網路交易外幣計價）10元/哩，無上限，無腦刷。✅保費有回饋（官方明確）✅海外含網路❌排除繳費類（水電/稅/電信代扣）❌分期無回饋
 重要：電信費七張卡均無哩程；超商/全聯只有CUBE集精選2%；Unicard任意選8家外直刷=1%，改LINE Pay=3.5%；王品必須王品瘋Pay；星巴克必須LINE Pay；保費推薦匯豐旅人18元/哩（長榮排除保費）；海外網購首選匯豐旅人10元/哩（最方便，含網路）
