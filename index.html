@@ -399,7 +399,7 @@ async function liveSearchPromos(merchant){
 {"promos":[{"card":"卡名或官方","title":"優惠標題","detail":"優惠細節（含金額/比例/門檻）","end":"結束日期YYYY-MM-DD或null","source":"來源"}],"summary":"整體摘要","merchant_promo":"官網促銷或合作說明，無則null"}`;
   const resp=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
-    headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
+    headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-beta":"web-search-2025-03-05"},
     body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,
       tools:[{"type":"web_search_20250305","name":"web_search"}],
       system:sys,
@@ -829,6 +829,85 @@ async function doLiveSearch(){
   ST.liveLoading=false;render();
 }
 
+// Renders only the search results into a container div (called on input to avoid keyboard jump)
+function renderSearchResultsInto(div){
+  if(ST.live&&!ST.liveLoading){div.appendChild(liveResultsPanel(ST.live));return;}
+  if(ST.liveLoading){
+    div.appendChild(el("div",{style:{textAlign:"center",padding:"24px 0",color:"#4ade80"}},
+      [el("div",{style:{fontSize:"28px",marginBottom:"8px"}},"🌐"),
+       el("div",{style:{fontSize:"14px"}},"正在搜尋官網與七張卡促銷…")]));
+    return;
+  }
+  if(ST.sel){
+    const bb=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px"}});
+    bb.appendChild(el("button",{onClick:()=>{ST.sel=null;render();},style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:"10px",padding:"6px 14px",fontSize:"14px",color:"#9ca3af"}},"← 返回"));
+    bb.appendChild(el("span",{style:{fontSize:"22px"}},ST.sel.icon));
+    bb.appendChild(el("span",{style:{fontSize:"17px",fontWeight:"700"}},ST.sel.name));
+    div.appendChild(bb);
+    const pb=promosBanner(ST.sel.name);if(pb)div.appendChild(pb);
+    div.appendChild(spanel(ST.sel));
+    return;
+  }
+  if(ST.results.length&&!ST.llm){
+    const pb=promosBanner(ST.query);if(pb)div.appendChild(pb);
+    div.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginBottom:"10px"}},`找到 ${ST.results.length} 個場域`));
+    ST.results.forEach(s=>{
+      const btn=el("button",{onClick:()=>{ST.sel=s;render();},style:{width:"100%",textAlign:"left",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"13px 14px",display:"flex",alignItems:"center",gap:"12px",marginBottom:"7px"}});
+      btn.appendChild(el("span",{style:{fontSize:"24px"}},s.icon));
+      const t=el("div",{style:{flex:"1"}});
+      t.appendChild(el("div",{style:{fontSize:"15px",color:"#e8eaf0",fontWeight:"600"}},s.name));
+      t.appendChild(el("div",{style:{fontSize:"13px",color:"#6b7280",marginTop:"2px"}},s.group));
+      btn.appendChild(t);
+      const pcount=activePromos(s.name).length;
+      if(pcount)btn.appendChild(el("span",{style:{fontSize:"11px",background:"rgba(245,158,11,0.3)",color:"#f59e0b",padding:"2px 7px",borderRadius:"8px",flexShrink:"0"}},"📣 "+pcount));
+      else if(s.warn)btn.appendChild(el("span",{style:{fontSize:"16px"}},"⚠️"));
+      div.appendChild(btn);
+    });
+    return;
+  }
+  if(ST.query.trim()&&!ST.llm&&!ST.loading){
+    const pb=promosBanner(ST.query);if(pb)div.appendChild(pb);
+    const nr=el("div",{style:{textAlign:"center",padding:"32px 0",color:"#6b7280"}});
+    nr.appendChild(el("div",{style:{fontSize:"36px",marginBottom:"10px"}},"🤖"));
+    nr.appendChild(el("div",{style:{fontSize:"15px",marginBottom:"14px"}},`找不到「${ST.query}」的內建資料`));
+    nr.appendChild(el("button",{onClick:doLLM,style:{background:"rgba(99,102,241,0.85)",border:"none",borderRadius:"12px",padding:"12px 24px",fontSize:"14px",fontWeight:"700",color:"white",marginBottom:"8px",display:"block",width:"100%"}},"🤖 AI 分析刷卡策略"));
+    nr.appendChild(el("button",{onClick:doLiveSearch,style:{background:"rgba(74,222,128,0.2)",border:"1px solid rgba(74,222,128,0.4)",borderRadius:"12px",padding:"12px 24px",fontSize:"14px",fontWeight:"700",color:"#4ade80",display:"block",width:"100%"}},"🌐 線上搜尋促銷優惠"));
+    div.appendChild(nr);return;
+  }
+  if(ST.loading){
+    div.appendChild(el("div",{style:{textAlign:"center",padding:"44px 0",color:"#6b7280"}},
+      [el("div",{style:{fontSize:"36px",marginBottom:"10px"}},"⏳"),el("div",{style:{fontSize:"15px"}},"AI分析中...")]));
+    return;
+  }
+  if(ST.llm){
+    const ai=el("div",{});
+    const ah=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px"}});
+    ah.appendChild(document.createTextNode("🤖"));
+    ah.appendChild(el("span",{style:{fontSize:"15px",color:"#818cf8",fontWeight:"600"}},`AI分析：${ST.llm.category}`));
+    ah.appendChild(el("button",{onClick:()=>{ST.llm=null;render();},style:{marginLeft:"auto",background:"none",border:"none",color:"#6b7280",fontSize:"22px"}},"×"));
+    ai.appendChild(ah);
+    if(ST.llm.notes)ai.appendChild(el("div",{className:"box",style:{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",color:"#fca5a5"}},`⚠ ${ST.llm.notes}`));
+    (ST.llm.recommendations||[]).forEach((r,i)=>{
+      const row=el("div",{style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"13px 14px",marginBottom:"7px"}});
+      const top=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"5px"}});
+      top.appendChild(el("span",{style:{fontSize:i<3?"20px":"15px"}},MEDAL[i]));
+      top.appendChild(el("span",{style:{fontSize:"15px",fontWeight:"700",color:"#a5b4fc"}},r.card));
+      if(r.payment&&r.payment!=="直刷")top.appendChild(el("span",{style:{fontSize:"12px",color:"#6b7280",background:"rgba(255,255,255,0.05)",padding:"2px 8px",borderRadius:"8px"}},r.payment));
+      row.appendChild(top);
+      row.appendChild(el("div",{style:{fontSize:"15px",fontWeight:"700",color:"#4ade80",marginBottom:"4px"}},r.reward));
+      row.appendChild(el("div",{style:{fontSize:"13px",color:"#9ca3af",lineHeight:"1.6"}},r.reason));
+      ai.appendChild(row);
+    });
+    div.appendChild(ai);return;
+  }
+  // Empty state
+  const emp=el("div",{style:{textAlign:"center",padding:"30px 0"}});
+  emp.appendChild(el("div",{style:{fontSize:"44px",marginBottom:"12px"}},"✈️"));
+  emp.appendChild(el("div",{style:{fontSize:"16px",color:"#6b7280",marginBottom:"6px"}},"輸入任意消費場所"));
+  emp.appendChild(el("div",{style:{fontSize:"13px",color:"#4b5563"}},"例：高鐵、星巴克、王品、家樂福…"));
+  div.appendChild(emp);
+}
+
 function render(){
   const app=document.getElementById("app");app.innerHTML="";
   const wrap=el("div",{});
@@ -874,102 +953,55 @@ function render(){
   cnt.appendChild(banner);
 
   if(ST.tab==="search"){
-    // Input row
+    // ── Static part: input + buttons (never rebuilt during typing) ──
     const iw=el("div",{style:{position:"relative",marginBottom:"8px"}});
-    const inp=el("input",{placeholder:"輸入消費場所（高鐵、樂子、星巴克…）",
+    const inp=el("input",{id:"main-q",placeholder:"輸入消費場所（高鐵、樂子、星巴克…）",
       style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.09)",
-        borderRadius:"14px",padding:"14px 110px 14px 16px",fontSize:"16px",color:"#e8eaf0",outline:"none"},value:ST.query});
-    inp.addEventListener("input",e=>{ST.query=e.target.value;ST.sel=null;ST.llm=null;ST.live=null;ST.results=ST.query.trim()?search(ST.query):[];render();});
+        borderRadius:"14px",padding:"14px 110px 14px 16px",fontSize:"16px",color:"#e8eaf0",outline:"none"},
+      value:ST.query});
+    // On input: update state + redraw ONLY the results div (no full render → keyboard stable)
+    inp.addEventListener("input",e=>{
+      ST.query=e.target.value;
+      ST.sel=null;ST.llm=null;ST.live=null;
+      ST.results=ST.query.trim()?search(ST.query):[];
+      // Update AI button colour
+      const aiBtn=document.getElementById("ai-btn");
+      if(aiBtn)aiBtn.style.background=ST.query.trim()&&!ST.loading?"rgba(99,102,241,0.85)":"rgba(99,102,241,0.25)";
+      // Show/hide live search button row
+      const lbr=document.getElementById("live-btn-row");
+      if(lbr)lbr.style.display=ST.query.trim()?"flex":"none";
+      // Only update results section
+      const rd=document.getElementById("search-results");
+      if(rd){rd.innerHTML="";renderSearchResultsInto(rd);}
+    });
     iw.appendChild(inp);
-    iw.appendChild(el("button",{onClick:doLLM,style:{position:"absolute",right:"7px",top:"50%",transform:"translateY(-50%)",
+    iw.appendChild(el("button",{id:"ai-btn",onClick:doLLM,style:{position:"absolute",right:"7px",top:"50%",transform:"translateY(-50%)",
       background:ST.query.trim()&&!ST.loading?"rgba(99,102,241,0.85)":"rgba(99,102,241,0.25)",
       border:"none",borderRadius:"10px",padding:"8px 13px",fontSize:"13px",fontWeight:"700",color:"#e8eaf0",whiteSpace:"nowrap"}},
       ST.loading?"⏳ AI中...":"🤖 AI"));
     cnt.appendChild(iw);
-    // Live search button row
-    if(ST.query.trim()){
-      const btnRow=el("div",{style:{display:"flex",gap:"8px",marginBottom:"14px"}});
-      btnRow.appendChild(el("button",{onClick:doLiveSearch,
-        style:{flex:"1",padding:"10px",background:ST.liveLoading?"rgba(74,222,128,0.2)":"rgba(74,222,128,0.15)",
-          border:"1px solid rgba(74,222,128,0.4)",borderRadius:"10px",fontSize:"13px",fontWeight:"700",color:"#4ade80"}},
-        ST.liveLoading?"⏳ 搜尋中...":"🌐 線上搜促銷（官網+七張卡）"));
-      cnt.appendChild(btnRow);
-    } else {
-      cnt.appendChild(el("div",{style:{height:"14px"}}));
-    }
-    if(!getKey())cnt.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginBottom:"12px"}},
-      ["🔑 AI與促銷搜尋需設定 API Key ",el("button",{onClick:()=>showKeyModal(doLLM),style:{fontSize:"12px",color:"#818cf8",background:"none",border:"none",textDecoration:"underline"}},"設定")]));
 
-    // Live search results (shown when present)
-    if(ST.live&&!ST.liveLoading){cnt.appendChild(liveResultsPanel(ST.live));}
-    if(ST.liveLoading){
-      cnt.appendChild(el("div",{style:{textAlign:"center",padding:"24px 0",color:"#4ade80"}},
-        [el("div",{style:{fontSize:"28px",marginBottom:"8px"}},"🌐"),
-         el("div",{style:{fontSize:"14px"}},"正在搜尋官網與七張卡促銷…")]));
-    }
+    // Live search button row (hidden when no query)
+    const liveRow=el("div",{id:"live-btn-row",style:{display:ST.query.trim()?"flex":"none",gap:"8px",marginBottom:"14px"}});
+    liveRow.appendChild(el("button",{onClick:doLiveSearch,
+      style:{flex:"1",padding:"10px",background:ST.liveLoading?"rgba(74,222,128,0.25)":"rgba(74,222,128,0.15)",
+        border:"1px solid rgba(74,222,128,0.4)",borderRadius:"10px",fontSize:"13px",fontWeight:"700",color:"#4ade80"}},
+      ST.liveLoading?"⏳ 搜尋中...":"🌐 線上搜促銷（官網+七張卡）"));
+    cnt.appendChild(liveRow);
 
-    if(ST.sel){
-      const bb=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px"}});
-      bb.appendChild(el("button",{onClick:()=>{ST.sel=null;render();},style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:"10px",padding:"6px 14px",fontSize:"14px",color:"#9ca3af"}},"← 返回"));
-      bb.appendChild(el("span",{style:{fontSize:"22px"}},ST.sel.icon));
-      bb.appendChild(el("span",{style:{fontSize:"17px",fontWeight:"700"}},ST.sel.name));
-      cnt.appendChild(bb);
-      // Active promos for this scenario
-      const pb=promosBanner(ST.sel.name);if(pb)cnt.appendChild(pb);
-      cnt.appendChild(spanel(ST.sel));
-    } else if(ST.results.length&&!ST.llm&&!ST.live&&!ST.liveLoading){
-      // Active promos for search query
-      const pb=promosBanner(ST.query);if(pb)cnt.appendChild(pb);
-      cnt.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginBottom:"10px"}},`找到 ${ST.results.length} 個場域`));
-      ST.results.forEach(s=>{
-        const btn=el("button",{onClick:()=>{ST.sel=s;render();},style:{width:"100%",textAlign:"left",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"13px 14px",display:"flex",alignItems:"center",gap:"12px",marginBottom:"7px"}});
-        btn.appendChild(el("span",{style:{fontSize:"24px"}},s.icon));
-        const t=el("div",{style:{flex:"1"}});
-        t.appendChild(el("div",{style:{fontSize:"15px",color:"#e8eaf0",fontWeight:"600"}},s.name));
-        t.appendChild(el("div",{style:{fontSize:"13px",color:"#6b7280",marginTop:"2px"}},s.group));
-        btn.appendChild(t);
-        // Show promo badge if active promos exist for this scenario
-        const pcount=activePromos(s.name).length;
-        if(pcount)btn.appendChild(el("span",{style:{fontSize:"11px",background:"rgba(245,158,11,0.3)",color:"#f59e0b",padding:"2px 7px",borderRadius:"8px",flexShrink:"0"}},"📣 "+pcount));
-        else if(s.warn)btn.appendChild(el("span",{style:{fontSize:"16px"}},"⚠️"));
-        cnt.appendChild(btn);
-      });
-    } else if(ST.query.trim()&&!ST.llm&&!ST.loading&&!ST.live&&!ST.liveLoading){
-      const pb=promosBanner(ST.query);if(pb)cnt.appendChild(pb);
-      const nr=el("div",{style:{textAlign:"center",padding:"32px 0",color:"#6b7280"}});
-      nr.appendChild(el("div",{style:{fontSize:"36px",marginBottom:"10px"}},"🤖"));
-      nr.appendChild(el("div",{style:{fontSize:"15px",marginBottom:"14px"}},`找不到「${ST.query}」的內建資料`));
-      nr.appendChild(el("button",{onClick:doLLM,style:{background:"rgba(99,102,241,0.85)",border:"none",borderRadius:"12px",padding:"12px 24px",fontSize:"14px",fontWeight:"700",color:"white",marginBottom:"8px",display:"block",width:"100%"}},"🤖 AI 分析刷卡策略"));
-      nr.appendChild(el("button",{onClick:doLiveSearch,style:{background:"rgba(74,222,128,0.2)",border:"1px solid rgba(74,222,128,0.4)",borderRadius:"12px",padding:"12px 24px",fontSize:"14px",fontWeight:"700",color:"#4ade80",display:"block",width:"100%"}},"🌐 線上搜尋促銷優惠"));
-      cnt.appendChild(nr);
-    } else if(ST.loading){
-      cnt.appendChild(el("div",{style:{textAlign:"center",padding:"44px 0",color:"#6b7280"}},[el("div",{style:{fontSize:"36px",marginBottom:"10px"}},"⏳"),el("div",{style:{fontSize:"15px"}},"AI分析中...")]));
-    } else if(ST.llm){
-      const ai=el("div",{});
-      const ah=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px"}});
-      ah.appendChild(document.createTextNode("🤖"));
-      ah.appendChild(el("span",{style:{fontSize:"15px",color:"#818cf8",fontWeight:"600"}},`AI分析：${ST.llm.category}`));
-      ah.appendChild(el("button",{onClick:()=>{ST.llm=null;render();},style:{marginLeft:"auto",background:"none",border:"none",color:"#6b7280",fontSize:"22px"}},"×"));
-      ai.appendChild(ah);
-      if(ST.llm.notes)ai.appendChild(el("div",{className:"box",style:{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",color:"#fca5a5"}},`⚠ ${ST.llm.notes}`));
-      (ST.llm.recommendations||[]).forEach((r,i)=>{
-        const row=el("div",{style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"13px 14px",marginBottom:"7px"}});
-        const top=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"5px"}});
-        top.appendChild(el("span",{style:{fontSize:i<3?"20px":"15px"}},MEDAL[i]));
-        top.appendChild(el("span",{style:{fontSize:"15px",fontWeight:"700",color:"#a5b4fc"}},r.card));
-        if(r.payment&&r.payment!=="直刷")top.appendChild(el("span",{style:{fontSize:"12px",color:"#6b7280",background:"rgba(255,255,255,0.05)",padding:"2px 8px",borderRadius:"8px"}},r.payment));
-        row.appendChild(top);
-        row.appendChild(el("div",{style:{fontSize:"15px",fontWeight:"700",color:"#4ade80",marginBottom:"4px"}},r.reward));
-        row.appendChild(el("div",{style:{fontSize:"13px",color:"#9ca3af",lineHeight:"1.6"}},r.reason));
-        ai.appendChild(row);
-      });
-      cnt.appendChild(ai);
-    } else {
-      const emp=el("div",{style:{textAlign:"center",padding:"30px 0"}});
-      emp.appendChild(el("div",{style:{fontSize:"44px",marginBottom:"12px"}},"✈️"));
-      emp.appendChild(el("div",{style:{fontSize:"16px",color:"#6b7280",marginBottom:"6px"}},"輸入任意消費場所"));
-      emp.appendChild(el("div",{style:{fontSize:"13px",color:"#4b5563"}},"例：高鐵、星巴克、王品、家樂福…"));
-      cnt.appendChild(emp);
+    if(!getKey())cnt.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginBottom:"10px"}},
+      ["🔑 AI功能需設定 API Key ",el("button",{onClick:()=>showKeyModal(doLLM),style:{fontSize:"12px",color:"#818cf8",background:"none",border:"none",textDecoration:"underline"}},"設定")]));
+
+    // ── Dynamic results area ──
+    const rd=el("div",{id:"search-results"});
+    renderSearchResultsInto(rd);
+    cnt.appendChild(rd);
+
+    // Restore focus without closing keyboard: only set value, don't re-focus
+    const existing=document.getElementById("main-q");
+    if(!existing){
+      // First render: set cursor
+      setTimeout(()=>{const i2=document.getElementById("main-q");if(i2){i2.focus();i2.setSelectionRange(ST.query.length,ST.query.length);}},30);
     }
   } else {
     // browse
@@ -1021,7 +1053,7 @@ function render(){
     width:"54px",height:"54px",borderRadius:"50%",
     background:getKey()?"rgba(99,102,241,0.9)":"rgba(99,102,241,0.4)",
     border:"none",fontSize:"24px",boxShadow:"0 4px 20px rgba(0,0,0,0.5)",zIndex:"50"}},"🔑"));
-  if(ST.tab==="search"){const i2=app.querySelector("input");if(i2)setTimeout(()=>{i2.focus();i2.setSelectionRange(ST.query.length,ST.query.length);},50);}
+  // Don't re-focus on render() — only set focus on first load to avoid keyboard jump
 }
 render();
 </script>
