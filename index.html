@@ -67,43 +67,52 @@ const STRATEGY={
   ricard:{card:"ricard",target:"玩旅刷",defaultMode:"天天刷（預設）",
     action:"Richart App → 權益方案 → 玩旅刷（固定，不改）",
     covers:["JAL日本航空","ANA全日空","新加坡航空","國泰航空","樂桃","酷航","越捷","雄獅旅遊","易遊網","可樂旅遊","東南旅遊"],
-    reward:"3.3% Point，無上限",
-    note:"不出國→星宇卡10元/哩；Richart玩旅刷角色：購買非JX/BR/CI航空的機票及旅行社，回饋優於其他卡的18-20元/哩",color:"#fbbf24"},
+    reward:"3.3% Point → 折帳單（現金用，不換哩程！）",
+    note:"⚠️ 換哩程極差：3.3%→長榮僅3.9哩/百元(25.6元/哩)，比直刷哩程卡差42%\n✅ 正確用法：點數折帳單（1點=1元），買JAL/ANA機票等效9.7折\n❌ 亞萬：2024/8停止兌換\n→ 以哩程為目標：買非聯名航空機票改刷匯豐旅人（5.56哩/百元）",color:"#fbbf24"},
 };
 
-// ─── REWARD TEMPLATES ────────────────────────────────────────
+// ─── REWARD TEMPLATES ─────────────────────────────────────────
+// m100 = 每百元換到的哩程數（精算值）
+// airline = 目標哩程計畫
 const R={
-  jx_20:  {id:"starlux",text:"20元/哩",score:4,note:"一般消費，入星宇COSMILE",method:"直刷",mode:null},
-  jx_10:  {id:"starlux",text:"10元/哩",score:8,note:"海外消費，入星宇COSMILE",method:"直刷",mode:null},
-  jx_sp:  {id:"starlux",text:"10元/哩×2",score:10,note:"指定通路雙倍，直入COSMILE",method:"官網/App",mode:null},
-  jx_none:{id:"starlux",text:"❌ 無哩程",score:0,note:"玉山官方排除（電信/水電/稅/超商/全聯）",method:"—",mode:null},
-  br_20:  {id:"eva",text:"20元/哩",score:4,note:"一般消費，入長榮Infinity",method:"直刷",mode:null},
-  br_sp:  {id:"eva",text:"10元/哩",score:10,note:"長榮指定通路，直入Infinity",method:"官網/App",mode:null},
-  br_exp: {id:"eva",text:"8元/哩",score:10,note:"Expedia訂房最優！",method:"Expedia",mode:null},
-  br_ins: {id:"eva",text:"❌ 保費排除",score:0,note:"長榮無限卡官方排除保費",method:"—",mode:null},
-  br_none:{id:"eva",text:"❌ 無哩程",score:0,note:"長榮排除此類消費",method:"—",mode:null},
-  ci_18:  {id:"ci",text:"18元/哩",score:4,note:"一般消費，入華夏帳戶",method:"直刷",mode:null},
-  ci_9:   {id:"ci",text:"9元/哩×2",score:10,note:"指定消費雙倍，入華夏帳戶",method:"直刷",mode:null},
-  ci_none:{id:"ci",text:"❌ 無哩程",score:0,note:"官方排除（電信/超商/全聯/水電/稅/公立醫療）",method:"—",mode:null},
-  ci_now: {id:"ci",text:"18元/哩⚠",score:3,note:"2024/10後海外網購無雙倍",method:"直刷",mode:null},
-  cb_2:   {id:"cube",text:"2% 小樹點",score:6,note:"集精選：超商/全聯/中油",method:"集精選",mode:"集精選"},
-  cb_3:   {id:"cube",text:"3% 小樹點",score:7,note:"玩數位（串流/網購）",method:"玩數位",mode:"需切換"},
-  cb_33:  {id:"cube",text:"3.3% 小樹點",score:7,note:"樂饗購（外送/百貨）",method:"樂饗購",mode:"需切換"},
-  cb_eu:  {id:"cube",text:"3% 小樹點",score:8,note:"趣旅遊：全球含EU，出國例外切換",method:"趣旅遊",mode:"出國例外"},
-  cb_003: {id:"cube",text:"0.3% ⚠",score:1,note:"CUBE未設定方案時的預設回饋",method:"預設",mode:"預設"},
-  cb_ins: {id:"cube",text:"領券1.2%",score:2,note:"保費需App領券（月限1000點）",method:"App領券",mode:"集精選外"},
-  uni_none:{id:"unicard",text:"❌ 無回饋",score:0,note:"排除：超商/全聯/電信/水電/稅費",method:"—",mode:null},
-  uni_1:  {id:"unicard",text:"1% ⚠",score:2,note:"非8家指定特店，僅基本1%",method:"基本",mode:"超出任意選"},
-  uni_lp: {id:"unicard",text:"3.5%（LINE Pay）",score:8,note:"LINE Pay在任意選8家→3.5%；包含星巴克/速食等",method:"LINE Pay+任意選",mode:"任意選"},
-  uni_35: {id:"unicard",text:"3.5% e point",score:8,note:"任意選8家指定特店（含1%基本）",method:"任意選",mode:"任意選"},
-  uni_ww: {id:"unicard",text:"3.5%（王品瘋Pay）",score:8,note:"王品集團，需用王品瘋Pay App付款",method:"王品瘋Pay+任意選",mode:"任意選",warn:"⚠ 必須王品瘋Pay，非直刷或LINE Pay"},
-  ri_33:  {id:"ricard",text:"3.3%",score:8,note:"玩旅刷：指定20+航空/旅行社（固定模式）",method:"玩旅刷",mode:"玩旅刷"},
-  ri_2:   {id:"ricard",text:"≈2%",score:4,note:"一般消費，非固定策略通路",method:"天天刷",mode:"天天刷"},
-  // 匯豐旅人無限卡
-  hs_18:  {id:"hsbc",text:"18元/哩",score:5,note:"國內一般消費，入旅遊積分（無需切換方案）",method:"直刷",mode:null},
-  hs_10:  {id:"hsbc",text:"10元/哩",score:9,note:"海外消費（外幣計價即可，含網路交易）無上限",method:"直刷",mode:null},
-  hs_ins: {id:"hsbc",text:"18元/哩（保費✅）",score:6,note:"保費官方明確有回饋，不限金額，單筆≥NT$1,000",method:"直刷",mode:null},
-  hs_none:{id:"hsbc",text:"❌ 無回饋",score:0,note:"排除：繳費（水/電/稅/電信代扣）及分期付款消費",method:"—",mode:null},
+  // ── 星宇世界卡（直入 COSMILE）──
+  jx_20:  {id:"starlux",text:"20元/哩",score:4, m100:5.00, airline:"星宇COSMILE",  note:"國內一般消費直入COSMILE（星空聯盟）",method:"直刷",mode:null},
+  jx_10:  {id:"starlux",text:"10元/哩",score:8, m100:10.0, airline:"星宇COSMILE",  note:"海外/指定通路，直入COSMILE（星空聯盟）",method:"直刷",mode:null},
+  jx_sp:  {id:"starlux",text:"10元/哩×2",score:10,m100:10.0,airline:"星宇COSMILE", note:"星宇官網/App指定通路，雙倍直入COSMILE",method:"官網/App",mode:null},
+  jx_none:{id:"starlux",text:"❌ 無哩程",score:0, m100:0,   airline:"—",           note:"玉山官方排除（電信/水電/稅/超商/全聯）",method:"—",mode:null},
+  // ── 長榮無限卡（直入 Infinity）──
+  br_20:  {id:"eva",text:"20元/哩",score:4, m100:5.00, airline:"長榮Infinity",  note:"國內一般消費直入Infinity（星空聯盟）",method:"直刷",mode:null},
+  br_sp:  {id:"eva",text:"10元/哩",score:10,m100:10.0, airline:"長榮Infinity",  note:"長榮官網/App指定通路，直入Infinity",method:"官網/App",mode:null},
+  br_exp: {id:"eva",text:"8元/哩 ★全場最高",score:10,m100:12.5,airline:"長榮Infinity",note:"七張卡最高！Expedia訂房每100元換12.5哩",method:"Expedia",mode:null},
+  br_ins: {id:"eva",text:"❌ 保費排除",score:0,m100:0, airline:"—",           note:"長榮無限卡官方排除保費",method:"—",mode:null},
+  br_none:{id:"eva",text:"❌ 無哩程",score:0,  m100:0,  airline:"—",           note:"長榮排除此類消費",method:"—",mode:null},
+  // ── 中信華航鼎尊（直入 華夏）──
+  ci_18:  {id:"ci",text:"18元/哩",score:4, m100:5.56, airline:"華航華夏",  note:"國內一般消費直入華夏（天合聯盟）",method:"直刷",mode:null},
+  ci_9:   {id:"ci",text:"9元/哩",score:10, m100:11.1, airline:"華航華夏",  note:"海外指定/華航官網/訂房，直入華夏",method:"直刷",mode:null},
+  ci_none:{id:"ci",text:"❌ 無哩程",score:0,m100:0,   airline:"—",         note:"官方排除（電信/超商/全聯/水電/稅/公立醫療）",method:"—",mode:null},
+  ci_now: {id:"ci",text:"18元/哩⚠",score:3,m100:5.56, airline:"華航華夏",  note:"2024/10後海外網購無雙倍，退回18元/哩",method:"直刷",mode:null},
+  // ── CUBE 小樹點（360點→1000哩長榮）──
+  cb_2:   {id:"cube",text:"2% 小樹點",score:6, m100:5.56, airline:"長榮Infinity", note:"集精選2%→360點換1000哩長榮，每百元5.56哩",method:"集精選",mode:"集精選"},
+  cb_3:   {id:"cube",text:"3% 小樹點",score:7, m100:8.33, airline:"長榮Infinity", note:"玩數位3%→每百元8.33哩長榮",method:"玩數位",mode:"需切換"},
+  cb_33:  {id:"cube",text:"3.3% 小樹點",score:7,m100:9.17, airline:"長榮Infinity", note:"樂饗購3.3%→每百元9.17哩長榮",method:"樂饗購",mode:"需切換"},
+  cb_eu:  {id:"cube",text:"3% 小樹點",score:8, m100:8.33, airline:"長榮Infinity", note:"趣旅遊3%（全球含EU）→每百元8.33哩長榮",method:"趣旅遊",mode:"出國例外"},
+  cb_003: {id:"cube",text:"0.3% ⚠",score:1,   m100:0.83, airline:"長榮Infinity", note:"CUBE未切換方案時預設0.3%，換哩僅0.83哩/百元",method:"預設",mode:"預設"},
+  cb_ins: {id:"cube",text:"領券1.2%",score:2,  m100:3.33, airline:"長榮Infinity", note:"保費需App領券1.2%，每百元3.33哩長榮",method:"App領券",mode:"集精選外"},
+  // ── Unicard e point（200點→300哩長榮/亞萬）──
+  uni_none:{id:"unicard",text:"❌ 無回饋",score:0, m100:0,    airline:"—",             note:"排除：超商/全聯/電信/水電/稅費",method:"—",mode:null},
+  uni_1:  {id:"unicard",text:"1%→1.5哩/百元",score:2,m100:1.5,airline:"長榮/亞萬",  note:"非8家指定特店，1%→200點換300哩",method:"基本",mode:"超出任意選"},
+  uni_lp: {id:"unicard",text:"3.5%→5.25哩/百元",score:8,m100:5.25,airline:"長榮/亞萬",note:"LINE Pay任意選3.5%→200點換300哩，每百元5.25哩",method:"LINE Pay+任意選",mode:"任意選"},
+  uni_35: {id:"unicard",text:"3.5%→5.25哩/百元",score:8,m100:5.25,airline:"長榮/亞萬",note:"任意選8家直刷3.5%→200點換300哩，每百元5.25哩",method:"任意選",mode:"任意選"},
+  uni_ww: {id:"unicard",text:"3.5%→5.25哩/百元",score:8,m100:5.25,airline:"長榮/亞萬",note:"王品瘋Pay任意選3.5%→每百元5.25哩",method:"王品瘋Pay+任意選",mode:"任意選",warn:"⚠ 必須王品瘋Pay App，非直刷或LINE Pay"},
+  // ── Richart 台新Point（換哩差！建議折帳單）──
+  // 長榮：11點→13哩；亞萬：2024/8停止；華航：11點→14哩
+  ri_33:  {id:"ricard",text:"3.3%→3.9哩/百元⚠",score:5,m100:3.9,airline:"長榮（差）建議折帳單",note:"玩旅刷3.3%，換長榮11點→13哩=3.9哩/百元=25.6元/哩❌\n⚠ 建議折帳單（3.3%現金），不換哩程！",method:"玩旅刷→折帳單",mode:"玩旅刷"},
+  ri_2:   {id:"ricard",text:"≈2%→2.4哩/百元",score:3,m100:2.36,airline:"長榮（差）",note:"2%→換長榮2.36哩/百元=42元/哩❌  建議折帳單",method:"天天刷→折帳單",mode:"天天刷"},
+  // ── 匯豐旅人無限卡（旅遊積分1:1）──
+  hs_18:  {id:"hsbc",text:"18元/哩",score:5,  m100:5.56,  airline:"16+家航空任選",note:"國內18元/哩，旅遊積分1:1換哩，16+家航空自由選",method:"直刷",mode:null},
+  hs_10:  {id:"hsbc",text:"10元/哩",score:9,  m100:10.0,  airline:"16+家航空任選",note:"海外（外幣計價）10元/哩，含網路交易，1:1即時入哩",method:"直刷",mode:null},
+  hs_ins: {id:"hsbc",text:"18元/哩（保費✅）",score:6,m100:5.56,airline:"16+家航空任選",note:"保費官方明確有回饋，1:1換哩，16+家任選",method:"直刷",mode:null},
+  hs_none:{id:"hsbc",text:"❌ 無回饋",score:0,m100:0,      airline:"—",              note:"排除：水電費/稅費/電信代扣/分期付款",method:"—",mode:null},
 };
 
 // ─── SCENARIOS ────────────────────────────────────────────────
@@ -403,9 +412,20 @@ function rrow(r,rank){
   info.appendChild(el("div",{style:{fontSize:"13px",color:"#9ca3af",lineHeight:"1.5"}},r.note));
   if(r.warn)info.appendChild(el("div",{style:{fontSize:"12px",color:"#f59e0b",marginTop:"3px"}},r.warn));
   row.appendChild(info);
-  const right=el("div",{style:{textAlign:"right",flexShrink:"0"}});
-  right.appendChild(el("div",{style:{fontSize:"14px",fontWeight:"700",color:r.score>0?c.color:"#4b5563",whiteSpace:"nowrap"}},r.text));
-  if(r.method&&r.method!=="—")right.appendChild(el("div",{style:{fontSize:"11px",color:"#6b7280",marginTop:"2px"}},r.method));
+  const right=el("div",{style:{textAlign:"right",flexShrink:"0",minWidth:"90px"}});
+  // Primary: miles per 100NT
+  if(r.m100>0){
+    right.appendChild(el("div",{style:{fontSize:"17px",fontWeight:"800",color:c.color,whiteSpace:"nowrap",lineHeight:"1.1"}},
+      `${r.m100.toFixed(r.m100===Math.floor(r.m100)?0:2)}哩`));
+    right.appendChild(el("div",{style:{fontSize:"10px",color:"#6b7280",marginBottom:"2px"}},"每百元"));
+  } else {
+    right.appendChild(el("div",{style:{fontSize:"14px",fontWeight:"700",color:"#4b5563",whiteSpace:"nowrap"}},r.text));
+  }
+  // Airline label
+  if(r.airline&&r.airline!=="—"){
+    right.appendChild(el("div",{style:{fontSize:"10px",color:r.score>0?c.color+"99":"#4b5563",marginTop:"1px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"95px"}},r.airline));
+  }
+  if(r.method&&r.method!=="—")right.appendChild(el("div",{style:{fontSize:"10px",color:"#4b5563",marginTop:"1px"}},r.method));
   right.appendChild(sbar(r.score));
   row.appendChild(right);
   return row;
@@ -422,9 +442,10 @@ function spanel(s){
     [el("div",{style:{fontSize:"12px",fontWeight:"700",color:"#fbbf24",marginBottom:"4px"}},"✈ 航空Mall"),
      el("div",{style:{fontSize:"13px",color:"#fde68a"}},s.mall.note)]));
   // legend
-  div.appendChild(el("div",{style:{display:"flex",gap:"8px",flexWrap:"wrap",marginBottom:"10px"}},
+  div.appendChild(el("div",{style:{display:"flex",gap:"8px",flexWrap:"wrap",marginBottom:"8px"}},
     [el("span",{className:"mode-ok"},"✓ 策略模式"),el("span",{className:"mode-warn"},"↻ 切換"),el("span",{className:"mode-def"},"⚪ 預設")]));
-  div.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginBottom:"10px"}},"回饋排行"));
+  div.appendChild(el("div",{style:{fontSize:"11px",color:"#4b5563",marginBottom:"10px"}},"右側大數字 = 刷每百元可換哩程數（終點目標）"));
+  div.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginBottom:"10px"}},"每百元換哩排行"));
   [...s.rewards].sort((a,b)=>b.score-a.score).forEach((r,i)=>{const row=rrow(r,i);if(row)div.appendChild(row);});
   if(s.pay?.length){
     div.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginTop:"14px",marginBottom:"8px"}},"支付注意"));
@@ -438,11 +459,61 @@ function spanel(s){
 // ─── STRATEGY PANEL ──────────────────────────────────────────
 function strategyPanel(){
   const div=el("div",{style:{padding:"16px 16px 60px"}});
-  div.appendChild(el("div",{style:{fontSize:"19px",fontWeight:"700",marginBottom:"4px"}},"📌 三卡固定策略"));
+  div.appendChild(el("div",{style:{fontSize:"19px",fontWeight:"700",marginBottom:"4px"}},"📌 三卡固定策略 + 哩程總表"));
   div.appendChild(el("div",{style:{fontSize:"13px",color:"#6b7280",marginBottom:"16px",lineHeight:"1.7"}},
-    "每張卡設定一次，無需每日切換。UP選因月費149點、Uber月刷6000元故不划算，改用免費任意選。"));
+    "以哩程為終點目標，精算七張卡每百元實際入帳哩程數。"));
 
-  // Cost-benefit calculator
+  // ── 七張卡每百元換哩總表 ──
+  div.appendChild(el("div",{style:{fontSize:"13px",fontWeight:"700",color:"#818cf8",letterSpacing:"2px",textTransform:"uppercase",marginBottom:"10px"}},"✈ 七張卡 每百元換哩精算表"));
+  const milesTable=[
+    {card:"長榮無限卡 BR",scene:"Expedia訂房",m:12.5, ntt:8,   airline:"長榮Infinity",color:"#4ade80",star:"★全場最高"},
+    {card:"中信華航 CI",  scene:"海外指定消費",m:11.1, ntt:9,   airline:"華航華夏",    color:"#f87171",star:""},
+    {card:"星宇世界卡 JX",scene:"海外/指定通路",m:10.0, ntt:10,  airline:"星宇COSMILE",color:"#7eb8ff",star:""},
+    {card:"長榮無限卡 BR",scene:"海外消費",    m:10.0, ntt:10,  airline:"長榮Infinity",color:"#4ade80",star:""},
+    {card:"匯豐旅人 HSBC",scene:"海外消費",    m:10.0, ntt:10,  airline:"16+家任選",   color:"#e879f9",star:"即時入哩"},
+    {card:"中信華航 CI",  scene:"國內/保費",   m:5.56, ntt:18,  airline:"華航華夏",    color:"#f87171",star:"保費✅"},
+    {card:"匯豐旅人 HSBC",scene:"國內/保費",   m:5.56, ntt:18,  airline:"16+家任選",   color:"#e879f9",star:"保費✅"},
+    {card:"CUBE集精選",   scene:"超商/全聯",   m:5.56, ntt:18,  airline:"長榮Infinity",color:"#60a5fa",star:"唯一超商"},
+    {card:"Unicard 任意選",scene:"3.5%通路",  m:5.25, ntt:19,  airline:"長榮/亞萬",   color:"#a3e635",star:""},
+    {card:"星宇世界卡 JX",scene:"國內一般",    m:5.0,  ntt:20,  airline:"星宇COSMILE",color:"#7eb8ff",star:""},
+    {card:"長榮無限卡 BR",scene:"國內一般",    m:5.0,  ntt:20,  airline:"長榮Infinity",color:"#4ade80",star:""},
+    {card:"Richart 折帳單",scene:"3.3%現金",  m:null, ntt:null,airline:"不換哩程！",  color:"#fbbf24",star:"建議折帳單"},
+    {card:"Richart 換長榮",scene:"玩旅刷3.3%",m:3.9,  ntt:26,  airline:"長榮（差）",  color:"#6b7280",star:"❌差"},
+  ];
+  const tb=el("div",{style:{borderRadius:"12px",overflow:"hidden",border:"1px solid rgba(255,255,255,0.08)",marginBottom:"20px"}});
+  // header
+  const hdr=el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:"0",background:"rgba(255,255,255,0.04)",padding:"8px 12px"}});
+  ["卡片／場景","目標哩程","每百元"].forEach(h=>hdr.appendChild(el("div",{style:{fontSize:"11px",color:"#6b7280",fontWeight:"700"}},h)));
+  tb.appendChild(hdr);
+  milesTable.forEach((row,i)=>{
+    const tr=el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:"0",padding:"8px 12px",
+      background:i%2===0?"rgba(255,255,255,0.015)":"transparent",
+      borderTop:"1px solid rgba(255,255,255,0.05)"}});
+    const c1=el("div",{});
+    c1.appendChild(el("div",{style:{fontSize:"12px",color:row.color,fontWeight:"700"}},row.card));
+    c1.appendChild(el("div",{style:{fontSize:"11px",color:"#6b7280"}},row.scene));
+    const c2=el("div",{});
+    c2.appendChild(el("div",{style:{fontSize:"12px",color:"#9ca3af"}},row.airline));
+    if(row.star)c2.appendChild(el("div",{style:{fontSize:"10px",color:row.m===null?"#f59e0b":row.m>=10?"#4ade80":row.m>=5?"#60a5fa":"#ef4444"}},row.star));
+    const c3=el("div",{style:{textAlign:"right"}});
+    if(row.m!==null){
+      c3.appendChild(el("div",{style:{fontSize:"16px",fontWeight:"800",color:row.m>=10?"#4ade80":row.m>=5?"#60a5fa":"#ef4444"}},`${row.m.toFixed(row.m===Math.floor(row.m)?0:2)}哩`));
+      c3.appendChild(el("div",{style:{fontSize:"10px",color:"#6b7280"}},`${row.ntt}元/哩`));
+    } else {
+      c3.appendChild(el("div",{style:{fontSize:"13px",color:"#f59e0b",fontWeight:"700"}},"折帳單"));
+      c3.appendChild(el("div",{style:{fontSize:"10px",color:"#6b7280"}},"3.3%現金"));
+    }
+    [c1,c2,c3].forEach(c=>tr.appendChild(c));
+    tb.appendChild(tr);
+  });
+  div.appendChild(tb);
+
+  // Richart warning box
+  div.appendChild(el("div",{className:"box",style:{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)",color:"#fca5a5"}},
+    [el("span",{style:{fontWeight:"700",display:"block",marginBottom:"6px"}},"⚠️ Richart 換哩程效益極差"),
+     document.createTextNode("Richart 3.3% → 換長榮：每百元僅 3.9哩（25.6元/哩），比直刷哩程卡差 42%\n❌ 亞萬：2024/8已停止兌換\n\n✅ 正確用法：玩旅刷3.3% 點數直接「折帳單」（1點=1元，最高折30%）\n→ 不換哩程！等於非聯名航空機票打9.7折")]));
+
+  // Cost-benefit calc
   div.appendChild(el("div",{style:{fontSize:"13px",fontWeight:"700",color:"#818cf8",letterSpacing:"2px",textTransform:"uppercase",marginBottom:"10px"}},"💰 Unicard UP選 vs 任意選（您的情況）"));
   const calcBox=el("div",{className:"box",style:{background:"rgba(163,230,53,0.06)",border:"1px solid rgba(163,230,53,0.25)"}});
   const calcData=[
@@ -565,9 +636,9 @@ function render(){
 
   // Header
   const hdr=el("div",{style:{padding:"20px 18px 14px",background:"linear-gradient(160deg,#0e1524,#111827)"}});
-  hdr.appendChild(el("div",{style:{fontSize:"11px",letterSpacing:"4px",color:"#6b7280",textTransform:"uppercase",marginBottom:"4px"}},"Mileage Optimizer v3.5"));
+  hdr.appendChild(el("div",{style:{fontSize:"11px",letterSpacing:"4px",color:"#6b7280",textTransform:"uppercase",marginBottom:"4px"}},"Mileage Optimizer v3.7"));
   hdr.appendChild(el("div",{style:{fontSize:"22px",fontWeight:"700"}},"哩程刷卡智慧助理"));
-  hdr.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginTop:"3px"}},"7張卡 · 匯豐旅人無限卡加入 · 官方但書核對"));
+  hdr.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginTop:"3px"}},"以哩程為終點 · 每百元換哩精算 · Richart折帳單策略"));
   wrap.appendChild(hdr);
 
   // Tabs
