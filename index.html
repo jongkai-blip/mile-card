@@ -785,26 +785,91 @@ function liveResultsPanel(data){
   return div;
 }
 
+// ─── API 連線測試 ─────────────────────────────────────────────
+async function testApiConnection(key){
+  try{
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":key.trim(),"anthropic-version":"2023-06-01"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:10,
+        messages:[{role:"user",content:"Hi"}]})
+    });
+    if(resp.status===401)return{ok:false,msg:"API Key 無效或已過期，請重新申請"};
+    if(resp.status===403)return{ok:false,msg:"API Key 無存取權限"};
+    if(resp.ok)return{ok:true,msg:"✅ 連線成功！"};
+    return{ok:false,msg:`HTTP ${resp.status} 錯誤`};
+  }catch(e){
+    if(e instanceof TypeError)
+      return{ok:false,msg:"❌ 網路連線失敗。可能原因：\n1. 網路不穩定，請稍後再試\n2. 防火牆或 VPN 阻擋\n3. 請確認可正常開啟 claude.ai"};
+    return{ok:false,msg:`連線錯誤：${e.message}`};
+  }
+}
+
 function showKeyModal(cb){
   const mc=document.getElementById("mc");mc.innerHTML="";
   const bg=el("div",{className:"modal-bg",onClick:e=>{if(e.target===bg)mc.innerHTML="";}});
   const box=el("div",{className:"modal"});
   box.appendChild(el("div",{style:{fontSize:"19px",fontWeight:"700",marginBottom:"8px"}},"🔑 Anthropic API Key"));
-  box.appendChild(el("div",{style:{fontSize:"13px",color:"#9ca3af",marginBottom:"16px",lineHeight:"1.7"}},
-    "AI搜尋需要 Anthropic API Key。\n申請：console.anthropic.com → API Keys\nKey 存在裝置 localStorage。"));
-  const inp=el("input",{type:"password",placeholder:"sk-ant-api03-...",
+
+  // Show current key preview if exists
+  const cur=getKey();
+  if(cur){
+    const preview=cur.length>12?cur.slice(0,8)+"…"+cur.slice(-4):"（已設定）";
+    box.appendChild(el("div",{style:{fontSize:"12px",color:"#4ade80",marginBottom:"8px",
+      background:"rgba(74,222,128,0.1)",borderRadius:"8px",padding:"6px 10px"}},`目前 Key：${preview}`));
+  }
+
+  box.appendChild(el("div",{style:{fontSize:"13px",color:"#9ca3af",marginBottom:"14px",lineHeight:"1.7"}},
+    "申請：console.anthropic.com → API Keys\n貼上 sk-ant-api03-... 開頭的 Key\nKey 只存在裝置本地，不外傳"));
+
+  const inp=el("input",{type:"text",placeholder:"sk-ant-api03-...",
     style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
-      borderRadius:"10px",padding:"13px 14px",fontSize:"15px",color:"#e8eaf0",outline:"none",marginBottom:"12px"},
-    value:getKey()});
+      borderRadius:"10px",padding:"13px 14px",fontSize:"14px",color:"#e8eaf0",outline:"none",
+      marginBottom:"10px",fontFamily:"monospace",letterSpacing:"0.5px"},
+    value:cur});
+  inp.setAttribute("autocomplete","off");inp.setAttribute("autocorrect","off");inp.setAttribute("spellcheck","false");
   box.appendChild(inp);
+
+  // Status area
+  const status=el("div",{style:{fontSize:"13px",marginBottom:"10px",minHeight:"20px",lineHeight:"1.6",whiteSpace:"pre-line",color:"#9ca3af"}});
+  box.appendChild(status);
+
+  // Test button
+  const testBtn=el("button",{onClick:async()=>{
+    const v=inp.value.trim();
+    if(!v){status.style.color="#f87171";status.textContent="請先輸入 API Key";return;}
+    if(!v.startsWith("sk-ant")){status.style.color="#f59e0b";status.textContent="⚠ Key 格式不對，應以 sk-ant 開頭";return;}
+    testBtn.disabled=true;testBtn.textContent="⏳ 測試中…";status.textContent="";
+    const r=await testApiConnection(v);
+    testBtn.disabled=false;testBtn.textContent="🔌 測試連線";
+    status.style.color=r.ok?"#4ade80":"#f87171";
+    status.textContent=r.msg;
+  },style:{width:"100%",padding:"10px",marginBottom:"8px",background:"rgba(255,255,255,0.06)",
+    border:"1px solid rgba(255,255,255,0.12)",borderRadius:"10px",fontSize:"13px",color:"#9ca3af"}},"🔌 測試連線");
+  box.appendChild(testBtn);
+
   const btnRow=el("div",{style:{display:"flex",gap:"8px"}});
   btnRow.appendChild(el("button",{onClick:()=>mc.innerHTML="",style:{flex:"1",padding:"13px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",fontSize:"14px",color:"#9ca3af"}},"取消"));
-  btnRow.appendChild(el("button",{onClick:()=>{const v=inp.value.trim();if(!v)return;setKey(v);mc.innerHTML="";if(cb)cb();},
-    style:{flex:"2",padding:"13px",background:"rgba(99,102,241,0.85)",border:"none",borderRadius:"10px",fontSize:"14px",fontWeight:"700",color:"white"}},"儲存並搜尋"));
+  btnRow.appendChild(el("button",{onClick:()=>{
+    const v=inp.value.trim();if(!v)return;
+    if(!v.startsWith("sk-ant")){status.style.color="#f59e0b";status.textContent="⚠ Key 格式不對，應以 sk-ant 開頭";return;}
+    setKey(v);mc.innerHTML="";if(cb)cb();
+  },style:{flex:"2",padding:"13px",background:"rgba(99,102,241,0.85)",border:"none",borderRadius:"10px",fontSize:"14px",fontWeight:"700",color:"white"}},"儲存並搜尋"));
   box.appendChild(btnRow);
-  if(getKey())box.appendChild(el("button",{onClick:()=>{setKey("");mc.innerHTML="";render();},
+  if(cur)box.appendChild(el("button",{onClick:()=>{setKey("");mc.innerHTML="";render();},
     style:{width:"100%",marginTop:"10px",padding:"8px",background:"transparent",border:"none",fontSize:"13px",color:"#6b7280"}},"清除 Key"));
   bg.appendChild(box);mc.appendChild(bg);
+}
+
+// ─── 精確錯誤識別 ─────────────────────────────────────────────
+function friendlyError(e){
+  if(e instanceof TypeError||e.message==="Failed to fetch")
+    return "網路連線失敗（Failed to fetch）\n\n可能原因：\n• 網路不穩，請稍後再試\n• 防火牆/代理攔截 api.anthropic.com\n• 請點🔑按鈕→「測試連線」確認";
+  if(e.message.includes("401"))return "API Key 無效或過期，請重新設定";
+  if(e.message.includes("403"))return "API Key 無存取權限";
+  if(e.message.includes("429"))return "API 請求過於頻繁，請稍後再試";
+  if(e.message==="NO_KEY")return "尚未設定 API Key";
+  return e.message;
 }
 
 async function doLLM(){
@@ -814,7 +879,7 @@ async function doLLM(){
   try{ST.llm=await queryLLM(ST.query);}
   catch(e){
     if(e.message==="NO_KEY"){showKeyModal(doLLM);ST.loading=false;render();return;}
-    ST.llm={category:"錯誤",recommendations:[],notes:`API錯誤：${e.message}`,mall_tip:null};
+    ST.llm={category:"錯誤",recommendations:[],notes:friendlyError(e),mall_tip:null};
   }
   ST.loading=false;render();
 }
@@ -826,7 +891,7 @@ async function doLiveSearch(){
   try{ST.live=await liveSearchPromos(ST.query);}
   catch(e){
     if(e.message==="NO_KEY"){showKeyModal(doLiveSearch);ST.liveLoading=false;render();return;}
-    ST.live={promos:[],summary:`搜尋錯誤：${e.message}`,merchant_promo:null};
+    ST.live={promos:[],summary:friendlyError(e),merchant_promo:null};
   }
   ST.liveLoading=false;render();
 }
