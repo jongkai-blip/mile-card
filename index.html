@@ -337,6 +337,13 @@ const GROUPS=[
 
 const getKey=()=>localStorage.getItem("ant_key")||"";
 const setKey=k=>localStorage.setItem("ant_key",k);
+const getProxy=()=>localStorage.getItem("ant_proxy")||"";
+const setProxy=p=>localStorage.setItem("ant_proxy",p);
+// Returns the API endpoint — uses proxy if configured, else direct
+function apiEndpoint(){
+  const p=getProxy().trim();
+  return p||"https://api.anthropic.com/v1/messages";
+}
 
 // ─── PROMO SYSTEM ────────────────────────────────────────────
 const PROMO_KEY="mile_promos";
@@ -375,7 +382,7 @@ CUBE→集精選（超商/全聯2%），Unicard→任意選8家（LINE Pay/高�
 重要：電信費七張卡均無哩程；超商/全聯只有CUBE集精選2%；Unicard任意選8家外直刷=1%，改LINE Pay=3.5%；王品必須王品瘋Pay；星巴克必須LINE Pay；保費推薦匯豐旅人18元/哩（長榮排除保費）；海外網購首選匯豐旅人10元/哩（最方便，含網路）
 針對「${q}」，考慮用戶策略後，JSON推薦（不含代碼塊）：
 {"category":"類別","recommendations":[{"rank":1,"card":"卡名","payment":"方式","reward":"回饋","reason":"說明含策略模式"}],"notes":"重要但書","mall_tip":null}`;
-  const resp=await fetch("https://api.anthropic.com/v1/messages",{
+  const resp=await fetch(apiEndpoint(),{
     method:"POST",
     headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
     body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:700,system:sys,
@@ -399,7 +406,7 @@ async function liveSearchPromos(merchant){
 注意：若不確定某筆促銷是否仍有效，請明確說明「需自行確認是否仍有效」
 以繁體中文JSON回傳（不含代碼塊）：
 {"promos":[{"card":"卡名或官方","title":"優惠標題","detail":"優惠細節","end":null,"source":"建議確認來源"}],"summary":"整體建議","merchant_promo":"官方合作說明或null"}`;
-  const resp=await fetch("https://api.anthropic.com/v1/messages",{
+  const resp=await fetch(apiEndpoint(),{
     method:"POST",
     headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
     body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1200,
@@ -786,22 +793,23 @@ function liveResultsPanel(data){
 }
 
 // ─── API 連線測試 ─────────────────────────────────────────────
-async function testApiConnection(key){
+async function testApiConnection(key,proxyUrl){
+  const endpoint=(proxyUrl||"").trim()||"https://api.anthropic.com/v1/messages";
   try{
-    const resp=await fetch("https://api.anthropic.com/v1/messages",{
+    const resp=await fetch(endpoint,{
       method:"POST",
       headers:{"Content-Type":"application/json","x-api-key":key.trim(),"anthropic-version":"2023-06-01"},
       body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:10,
         messages:[{role:"user",content:"Hi"}]})
     });
-    if(resp.status===401)return{ok:false,msg:"API Key 無效或已過期，請重新申請"};
-    if(resp.status===403)return{ok:false,msg:"API Key 無存取權限"};
-    if(resp.ok)return{ok:true,msg:"✅ 連線成功！"};
-    return{ok:false,msg:`HTTP ${resp.status} 錯誤`};
+    if(resp.status===401)return{ok:false,msg:"❌ API Key 無效或已過期，請重新申請"};
+    if(resp.status===403)return{ok:false,msg:"❌ API Key 無存取權限"};
+    if(resp.ok)return{ok:true,msg:`✅ 連線成功！${endpoint.includes("anthropic.com")?"（直連）":"（經代理）"}`};
+    return{ok:false,msg:`❌ HTTP ${resp.status} 錯誤`};
   }catch(e){
     if(e instanceof TypeError)
-      return{ok:false,msg:"❌ 網路連線失敗。可能原因：\n1. 網路不穩定，請稍後再試\n2. 防火牆或 VPN 阻擋\n3. 請確認可正常開啟 claude.ai"};
-    return{ok:false,msg:`連線錯誤：${e.message}`};
+      return{ok:false,msg:"❌ 直連失敗（CORS/防火牆）\n→ 請填入 Cloudflare Worker 代理網址後再測試"};
+    return{ok:false,msg:`❌ 連線錯誤：${e.message}`};
   }
 }
 
@@ -809,9 +817,8 @@ function showKeyModal(cb){
   const mc=document.getElementById("mc");mc.innerHTML="";
   const bg=el("div",{className:"modal-bg",onClick:e=>{if(e.target===bg)mc.innerHTML="";}});
   const box=el("div",{className:"modal"});
-  box.appendChild(el("div",{style:{fontSize:"19px",fontWeight:"700",marginBottom:"8px"}},"🔑 Anthropic API Key"));
+  box.appendChild(el("div",{style:{fontSize:"19px",fontWeight:"700",marginBottom:"10px"}},"🔑 API 設定"));
 
-  // Show current key preview if exists
   const cur=getKey();
   if(cur){
     const preview=cur.length>12?cur.slice(0,8)+"…"+cur.slice(-4):"（已設定）";
@@ -819,48 +826,58 @@ function showKeyModal(cb){
       background:"rgba(74,222,128,0.1)",borderRadius:"8px",padding:"6px 10px"}},`目前 Key：${preview}`));
   }
 
-  box.appendChild(el("div",{style:{fontSize:"13px",color:"#9ca3af",marginBottom:"14px",lineHeight:"1.7"}},
-    "申請：console.anthropic.com → API Keys\n貼上 sk-ant-api03-... 開頭的 Key\nKey 只存在裝置本地，不外傳"));
-
-  const inp=el("input",{type:"text",placeholder:"sk-ant-api03-...",
+  // API Key
+  box.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginBottom:"4px"}},"Anthropic API Key"));
+  const keyInp=el("input",{type:"text",placeholder:"sk-ant-api03-...",
     style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
-      borderRadius:"10px",padding:"13px 14px",fontSize:"14px",color:"#e8eaf0",outline:"none",
-      marginBottom:"10px",fontFamily:"monospace",letterSpacing:"0.5px"},
-    value:cur});
-  inp.setAttribute("autocomplete","off");inp.setAttribute("autocorrect","off");inp.setAttribute("spellcheck","false");
-  box.appendChild(inp);
+      borderRadius:"10px",padding:"11px 14px",fontSize:"14px",color:"#e8eaf0",outline:"none",
+      marginBottom:"12px",fontFamily:"monospace"},value:cur});
+  keyInp.setAttribute("autocomplete","off");keyInp.setAttribute("autocorrect","off");keyInp.setAttribute("spellcheck","false");
+  box.appendChild(keyInp);
 
-  // Status area
-  const status=el("div",{style:{fontSize:"13px",marginBottom:"10px",minHeight:"20px",lineHeight:"1.6",whiteSpace:"pre-line",color:"#9ca3af"}});
+  // Proxy URL
+  const curProxy=getProxy();
+  box.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginBottom:"4px"}},"代理網址（醫院/公司網路防火牆時需填）"));
+  const proxyInp=el("input",{type:"text",placeholder:"https://mile-proxy.你的帳號.workers.dev",
+    style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",
+      borderRadius:"10px",padding:"11px 14px",fontSize:"13px",color:"#e8eaf0",outline:"none",marginBottom:"4px"},
+    value:curProxy});
+  proxyInp.setAttribute("autocomplete","off");proxyInp.setAttribute("autocorrect","off");
+  box.appendChild(proxyInp);
+  box.appendChild(el("div",{style:{fontSize:"11px",color:"#4b5563",marginBottom:"12px",lineHeight:"1.6"}},
+    "若直連失敗：cloudflare.com/workers 免費建立代理（見下方步驟）"));
+
+  const status=el("div",{style:{fontSize:"13px",marginBottom:"10px",minHeight:"20px",lineHeight:"1.7",
+    whiteSpace:"pre-line",color:"#9ca3af"}});
   box.appendChild(status);
 
-  // Test button
   const testBtn=el("button",{onClick:async()=>{
-    const v=inp.value.trim();
-    if(!v){status.style.color="#f87171";status.textContent="請先輸入 API Key";return;}
-    if(!v.startsWith("sk-ant")){status.style.color="#f59e0b";status.textContent="⚠ Key 格式不對，應以 sk-ant 開頭";return;}
+    const k=keyInp.value.trim();const p=proxyInp.value.trim();
+    if(!k){status.style.color="#f87171";status.textContent="請先輸入 API Key";return;}
+    if(!k.startsWith("sk-ant")){status.style.color="#f59e0b";status.textContent="⚠ Key 應以 sk-ant 開頭";return;}
     testBtn.disabled=true;testBtn.textContent="⏳ 測試中…";status.textContent="";
-    const r=await testApiConnection(v);
+    const r=await testApiConnection(k,p);
     testBtn.disabled=false;testBtn.textContent="🔌 測試連線";
-    status.style.color=r.ok?"#4ade80":"#f87171";
-    status.textContent=r.msg;
+    status.style.color=r.ok?"#4ade80":"#f87171";status.textContent=r.msg;
   },style:{width:"100%",padding:"10px",marginBottom:"8px",background:"rgba(255,255,255,0.06)",
     border:"1px solid rgba(255,255,255,0.12)",borderRadius:"10px",fontSize:"13px",color:"#9ca3af"}},"🔌 測試連線");
   box.appendChild(testBtn);
 
   const btnRow=el("div",{style:{display:"flex",gap:"8px"}});
-  btnRow.appendChild(el("button",{onClick:()=>mc.innerHTML="",style:{flex:"1",padding:"13px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",fontSize:"14px",color:"#9ca3af"}},"取消"));
+  btnRow.appendChild(el("button",{onClick:()=>mc.innerHTML="",style:{flex:"1",padding:"12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",fontSize:"14px",color:"#9ca3af"}},"取消"));
   btnRow.appendChild(el("button",{onClick:()=>{
-    const v=inp.value.trim();if(!v)return;
-    if(!v.startsWith("sk-ant")){status.style.color="#f59e0b";status.textContent="⚠ Key 格式不對，應以 sk-ant 開頭";return;}
-    setKey(v);mc.innerHTML="";if(cb)cb();
-  },style:{flex:"2",padding:"13px",background:"rgba(99,102,241,0.85)",border:"none",borderRadius:"10px",fontSize:"14px",fontWeight:"700",color:"white"}},"儲存並搜尋"));
+    const k=keyInp.value.trim();const p=proxyInp.value.trim();
+    if(!k){status.style.color="#f87171";status.textContent="請輸入 API Key";return;}
+    if(!k.startsWith("sk-ant")){status.style.color="#f59e0b";status.textContent="⚠ Key 格式不對";return;}
+    setKey(k);setProxy(p);mc.innerHTML="";if(cb)cb();
+  },style:{flex:"2",padding:"12px",background:"rgba(99,102,241,0.85)",border:"none",borderRadius:"10px",fontSize:"14px",fontWeight:"700",color:"white"}},"儲存"));
   box.appendChild(btnRow);
-  if(cur)box.appendChild(el("button",{onClick:()=>{setKey("");mc.innerHTML="";render();},
-    style:{width:"100%",marginTop:"10px",padding:"8px",background:"transparent",border:"none",fontSize:"13px",color:"#6b7280"}},"清除 Key"));
+  if(cur)box.appendChild(el("button",{onClick:()=>{setKey("");setProxy("");mc.innerHTML="";render();},
+    style:{width:"100%",marginTop:"10px",padding:"8px",background:"transparent",border:"none",fontSize:"13px",color:"#6b7280"}},"清除所有設定"));
   bg.appendChild(box);mc.appendChild(bg);
 }
 
+// ─── 精確錯誤識別 ─────────────────────────────────────────────
 // ─── 精確錯誤識別 ─────────────────────────────────────────────
 function friendlyError(e){
   if(e instanceof TypeError||e.message==="Failed to fetch")
