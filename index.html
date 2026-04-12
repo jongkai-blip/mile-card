@@ -66,9 +66,9 @@ const STRATEGY={
     note:"每月 Unicard 百大消費 < NT$14,900 時，任意選比UP選划算（免月費149點）",color:"#a3e635"},
   ricard:{card:"ricard",target:"玩旅刷",defaultMode:"天天刷（預設）",
     action:"Richart App → 權益方案 → 玩旅刷（固定，不改）",
-    covers:["JAL日本航空","ANA全日空","新加坡航空","國泰航空","樂桃","酷航","越捷","雄獅旅遊","易遊網","可樂旅遊","東南旅遊"],
-    reward:"3.3% Point → 折帳單（現金用，不換哩程！）",
-    note:"⚠️ 換哩程極差：3.3%→長榮僅3.9哩/百元(25.6元/哩)，比直刷哩程卡差42%\n✅ 正確用法：點數折帳單（1點=1元），買JAL/ANA機票等效9.7折\n❌ 亞萬：2024/8停止兌換\n→ 以哩程為目標：買非聯名航空機票改刷匯豐旅人（5.56哩/百元）",color:"#fbbf24"},
+    covers:["JAL日本航空","ANA全日空","新加坡航空","國泰航空","樂桃","酷航","捷星","越捷","雄獅旅遊","易遊網","可樂旅遊","東南旅遊","Agoda","Booking.com","KKday","Klook"],
+    reward:"3.3% Point → 正確用法：折帳單（非哩程）",
+    note:"【完整分析：以哩程為終點，Richart七大方案均無優勢】\n❌ 換哩程：3.3%→長榮僅3.9哩/百元(26元/哩)，全場域輸給其他六張卡\n❌ Pay著刷3.8%→長榮也只有4.5哩/百元(22元/哩)，仍遜色\n❌ 亞萬：2024/8已停止兌換\n\n✅ 真正獨有價值（非哩程）：\n1. 折帳單：點數1點=1元，買JAL/ANA機票實質9.7折（不換哩程，省現金）\n2. 免費市區停車：月消費≥6,000元，次月享6小時免費停車\n3. 免費機車停車：月消費≥6,000元，次月享8次（業界唯一）\n4. SUICA/ICOCA/PASMO/WOWPASS儲值3.3%（日韓旅遊）\n\n→ 策略建議：買非聯名航空機票→改刷匯豐旅人（5.56哩/百元，贏42%）\n  只有「點數折帳單+停車」才是Richart的真實競爭力",color:"#fbbf24"},
 };
 
 // ─── REWARD TEMPLATES ─────────────────────────────────────────
@@ -680,10 +680,22 @@ function strategyPanel(){
     [el("span",{style:{fontWeight:"700",display:"block",marginBottom:"4px"}},"🆕 匯豐旅人無限卡 — 無腦刷彈性換哩"),
      document.createTextNode("✅ 保費18元/哩（官方明確有回饋，長榮卡排除保費）\n✅ 海外網購10元/哩（外幣計價即可，中信2024/10後只有18元/哩）\n✅ 即時入哩（除華航/新航/日航/海南，App秒換哩，搶限時機票）\n✅ 可換16+家：長榮/亞萬/國泰/JAL/ANA/新航/阿聯酋/澳航/卡達/越南/美聯航等\n❌ 水電費/稅費/電信代扣/分期付款 → 無回饋\n⚠ 年費NT$8,000固定，無法免年費")]));
 
-  // Richart scope
+  // Richart scope - updated with full analysis
   div.appendChild(el("div",{className:"box",style:{background:"rgba(251,191,36,0.06)",border:"1px solid rgba(251,191,36,0.25)",color:"#fde68a"}},
-    [el("span",{style:{fontWeight:"700",display:"block",marginBottom:"4px"}},"✈ Richart 玩旅刷 使用場景"),
-     document.createTextNode("專用購買 JAL/ANA/新加坡航空/國泰/樂桃/酷航等（無持有聯名卡的航空）及雄獅/易遊等旅行社。\n不出國→星宇世界卡或匯豐旅人已涵蓋全海外，Richart不需要出國刷。")]));
+    [el("span",{style:{fontWeight:"700",display:"block",marginBottom:"6px"}},"🔍 Richart 完整分析：以哩程為終點，七大方案均無優勢"),
+     document.createTextNode(
+       "【換哩比較（最佳：長榮11點→13哩）】\n" +
+       "Richart 3.3% → 3.9哩/百元（26元/哩） ← 全場域最低\n" +
+       "Richart Pay著刷3.8% → 4.5哩/百元（22元/哩） ← 仍輸\n\n" +
+       "對比：CUBE集精選 5.6哩 / Unicard 5.25哩 / 匯豐旅人 5.6哩\n\n" +
+       "✅ Richart 真正獨有的競爭力（非哩程）：\n" +
+       "1. 折帳單：買JAL/ANA/樂桃機票實質9.7折（比換哩更實在）\n" +
+       "2. 免費停車：月消費≥6,000元 → 次月市區停車免費6小時\n" +
+       "3. 免費機車停車：月消費≥6,000元 → 次月8次（業界唯一）\n" +
+       "4. SUICA/ICOCA/PASMO/WOWPASS儲值3.3%（日韓交通卡）\n\n" +
+       "❌ 亞萬：2024/8已停止兌換\n\n" +
+       "→ 買非聯名航空機票：改刷匯豐旅人18元/哩（5.56哩/百元），多42%"
+     )]));
   return div;
 }
 
