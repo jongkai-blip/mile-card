@@ -118,6 +118,8 @@ const R={
   hs_10:  {id:"hsbc",text:"10元/哩",score:9,  m100:10.0,  airline:"16+家航空任選",note:"海外（外幣計價）10元/哩，含網路交易，1:1即時入哩。2026/4/1起兌換華航也改1:1！",method:"直刷",mode:null},
   hs_ins: {id:"hsbc",text:"18元/哩（保費✅）",score:6,m100:5.56,airline:"16+家航空任選",note:"保費官方明確有回饋，1:1換哩，16+家任選",method:"直刷",mode:null},
   hs_none:{id:"hsbc",text:"❌ 無回饋",score:0,m100:0,      airline:"—",              note:"排除：水電費/稅費/電信代扣/分期付款",method:"—",mode:null},
+  costco_only:{id:"eva",text:"❌ 只能刷富邦Costco卡",score:0,m100:0,airline:"—",
+    note:"Costco好市多只接受台北富邦銀行 Costco聯名卡，其他信用卡完全無法使用",method:"—",mode:null},
   hs_711: {id:"hsbc",text:"❌ 刷不過",score:0,m100:0,        airline:"—",              note:"匯豐不在7-11/全家合作銀行名單！實體卡直接刷不過，無任何回饋",method:"—",mode:null},
   br_711: {id:"eva", text:"❌ 超商無哩程",score:0,m100:0,    airline:"—",              note:"長榮無限卡（國泰）雖可直刷7-11，但超商消費官方排除，直刷零哩程",method:"—",mode:null},
   jx_711: {id:"starlux",text:"❌ 超商無哩程",score:0,m100:0, airline:"—",              note:"星宇世界卡（玉山）雖可直刷7-11，但超商消費官方排除，直刷零哩程",method:"—",mode:null},
@@ -140,6 +142,12 @@ const SCENARIOS=[
    excl:"❌ 中信：排除全聯\n❌ Unicard：全聯非百大，無回饋\n⚠ 匯豐旅人：18元/哩一般消費（但CUBE集精選2%更佳）",
    pay:[{m:"CUBE集精選（策略固定）",n:"需實體卡或PX Pay直刷；不可全支付"}],
    tip:"CUBE「集精選」2%（策略固定）唯一有效。匯豐旅人18元/哩可刷但不如2%划算。"},
+  {id:"costco",name:"好市多 Costco",icon:"🏬",group:"量販/超市",parent:"domestic",
+   kw:["costco","好市多","科斯科"],
+   rewards:[R.costco_only,R.ci_none,R.hs_none,R.jx_none,R.br_none,R.uni_none,R.cb_003],
+   excl:"🔴 Costco 全台門市只接受「台北富邦銀行 Costco 聯名卡」\n\n❌ 您持有的七張卡全部無法在Costco刷卡！\n（星宇/長榮/華航/匯豐/Unicard/CUBE/Richart 均不接受）\n\n✅ 唯一可用：台北富邦 Costco 聯名卡（非你目前七張之一）\n→ 消費享1.5%~4% 富邦FBon點回饋",
+   warn:"🔴 Costco 只收富邦Costco聯名卡！你目前七張卡在Costco全部刷不過！",
+   tip:"你目前七張卡均無法在Costco消費。如果常去Costco，建議單獨申辦台北富邦Costco聯名卡。"},
   {id:"carrefour",name:"家樂福",icon:"🛒",group:"量販/超市",parent:"domestic",
    kw:["家樂福","carrefour"],
    rewards:[R.uni_lp,R.cb_33,R.hs_18,R.ri_2,R.br_20,R.jx_20,R.ci_18],
@@ -525,9 +533,10 @@ async function liveSearchPromos(merchant){
   const key=getKey();if(!key)throw new Error("NO_KEY");
   const cards="玉山星宇世界卡、國泰世華長榮無限卡、中信華航鼎尊無限卡、國泰CUBE卡、玉山Unicard、台新Richart卡、匯豐旅人無限卡";
   const sys=`你是台灣信用卡促銷搜尋助理，根據你的訓練資料回答。針對指定消費場域「${merchant}」：
-1. 列出你知道的該場域信用卡合作優惠或刷卡回饋（如有）
-2. 針對以下七張卡：${cards}，說明哪幾張有特別優惠
+1. 若該場域有信用卡使用限制（如Costco好市多只接受富邦Costco聯名卡），請在summary最前面明確說明此限制
+2. 僅針對以下七張卡：${cards}，說明哪幾張真正有特別優惠（若某張卡無法在該場域使用，直接跳過勿列出）
 3. 說明該場域官方是否有聯名卡或長期刷卡優惠合作
+重要：若場域有獨家聯名卡限制（如Costco），promos陣列只需回傳該限制說明，不要虛構其他卡的優惠
 注意：若不確定某筆促銷是否仍有效，請明確說明「需自行確認是否仍有效」
 以繁體中文JSON回傳（不含代碼塊）：
 {"promos":[{"card":"卡名或官方","title":"優惠標題","detail":"優惠細節","end":null,"source":"建議確認來源"}],"summary":"整體建議","merchant_promo":"官方合作說明或null"}`;
@@ -685,9 +694,24 @@ function spanel(s){
     div.appendChild(mccBox);
   }
 
-  // ── 建議 tip ───────────────────────────────────────────────
+  // ── 目前目標橫幅 ──────────────────────────────────────────
+  const gl=goalLabel();
+  const goalBanner=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",
+    padding:"8px 12px",borderRadius:"10px",marginBottom:"10px",
+    background:"rgba(99,102,241,0.12)",border:"1px solid rgba(99,102,241,0.35)"}});
+  goalBanner.appendChild(el("span",{style:{fontSize:"16px"}},gl.icon));
+  goalBanner.appendChild(el("span",{style:{fontSize:"13px",color:"#a5b4fc",fontWeight:"700"}},
+    `目標：${gl.label}`));
+  goalBanner.appendChild(el("span",{style:{fontSize:"11px",color:"#6b7280",marginLeft:"auto"}},
+    "可在頂部切換目標"));
+  div.appendChild(goalBanner);
+
+  // ── 建議 tip（依目標動態調整標題）────────────────────────
+  const tipLabel = gl.id==="cash" ? "💡 現金折帳建議" :
+                   gl.id==="china" ? "💡 華航哩程建議" :
+                   gl.id==="asia"  ? "💡 亞萬哩程建議" : "💡 長榮哩程建議";
   div.appendChild(el("div",{className:"box",style:{background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.3)",color:"#c7d2fe"}},
-    [el("span",{style:{fontSize:"12px",fontWeight:"700",color:"#818cf8",display:"block",marginBottom:"4px"}},"💡 建議"),
+    [el("span",{style:{fontSize:"12px",fontWeight:"700",color:"#818cf8",display:"block",marginBottom:"4px"}},tipLabel),
      document.createTextNode(s.tip)]));
   if(s.warn)div.appendChild(el("div",{className:"box",style:{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.3)",color:"#fca5a5",whiteSpace:"pre-line"}},s.warn));
   if(s.excl){
@@ -705,8 +729,12 @@ function spanel(s){
   // legend
   div.appendChild(el("div",{style:{display:"flex",gap:"8px",flexWrap:"wrap",marginBottom:"8px"}},
     [el("span",{className:"mode-ok"},"✓ 策略模式"),el("span",{className:"mode-warn"},"↻ 切換"),el("span",{className:"mode-def"},"⚪ 預設")]));
-  div.appendChild(el("div",{style:{fontSize:"11px",color:"#4b5563",marginBottom:"10px"}},"右側大數字 = 刷每百元可換哩程數（終點目標）"));
-  div.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginBottom:"10px"}},"每百元換哩排行"));
+  // 動態排行標題
+  const rankLabel = gl.id==="cash" ? "每百元現金回饋排行" :
+                    gl.id==="china"? "每百元換華航哩排行" :
+                    gl.id==="asia" ? "每百元換亞萬哩排行" : "每百元換長榮哩排行";
+  div.appendChild(el("div",{style:{fontSize:"11px",color:"#4b5563",marginBottom:"4px"}},"右側大數字 = 刷每百元可換哩程數"));
+  div.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginBottom:"10px"}},rankLabel));
   [...s.rewards].sort((a,b)=>getGoalScore(b)-getGoalScore(a)).forEach((r,i)=>{const row=rrow(r,i);if(row)div.appendChild(row);});
   if(s.pay?.length){
     div.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginTop:"14px",marginBottom:"8px"}},"支付注意"));
