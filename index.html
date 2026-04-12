@@ -584,8 +584,42 @@ function spanel(s){
     [el("span",{style:{fontSize:"12px",fontWeight:"700",color:"#818cf8",display:"block",marginBottom:"4px"}},"💡 建議"),
      document.createTextNode(s.tip)]));
   if(s.warn)div.appendChild(el("div",{className:"box",style:{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.3)",color:"#fca5a5",whiteSpace:"pre-line"}},s.warn));
-  if(s.excl)div.appendChild(el("div",{className:"box",style:{background:"rgba(245,158,11,0.08)",border:"1px solid rgba(245,158,11,0.3)",color:"#fde68a",whiteSpace:"pre-line"}},
-    [el("span",{style:{fontWeight:"700",display:"block",marginBottom:"4px"}},"📋 但書/備注"),document.createTextNode(s.excl)]));
+  if(s.excl){
+    // Split excl into MCC section (lines containing 'MCC') and regular notes
+    const lines = s.excl.split('\n');
+    const mccLines = lines.filter(l=>l.includes('MCC'));
+    const otherLines = lines.filter(l=>!l.includes('MCC'));
+
+    // Regular excl box (非MCC but書)
+    if(otherLines.join('').trim()){
+      div.appendChild(el("div",{className:"box",style:{background:"rgba(245,158,11,0.08)",border:"1px solid rgba(245,158,11,0.3)",color:"#fde68a",whiteSpace:"pre-line"}},
+        [el("span",{style:{fontWeight:"700",display:"block",marginBottom:"4px"}},"📋 但書/備注"),
+         document.createTextNode(otherLines.join('\n').trim())]));
+    }
+
+    // MCC 獨立醒目橫幅
+    if(mccLines.length>0){
+      const mccBox=el("div",{style:{borderRadius:"12px",padding:"12px 14px",marginBottom:"8px",
+        background:"rgba(6,182,212,0.08)",border:"2px solid rgba(6,182,212,0.5)"}});
+      mccBox.appendChild(el("div",{style:{fontSize:"12px",fontWeight:"700",color:"#22d3ee",
+        marginBottom:"6px",letterSpacing:"1px"}},"🏷️ MCC刷卡類別警示"));
+      const mccText=el("div",{style:{fontSize:"13px",color:"#67e8f9",lineHeight:"1.8",whiteSpace:"pre-line"}});
+
+      // Format the MCC lines clearly
+      const isRestaurantScenario = mccLines.some(l=>l.includes('百貨'));
+      const formatted = isRestaurantScenario ?
+        "📌 信用卡依 MCC Code 判斷回饋類別，非看實體位置：\n" +
+        "• 獨立餐廳刷卡機 → MCC 5812（餐廳）→ 餐廳回饋 ✅\n" +
+        "• 百貨內用百貨刷卡機 → MCC 5311（百貨）→ 餐廳回饋 ❌\n" +
+        "• 美食街攤位 → MCC 5311（百貨）→ 餐廳回饋 ❌\n\n" +
+        "✅ CUBE 樂饗購 同時涵蓋 MCC 5812 + 5311\n" +
+        "   → 不論在哪裡用餐，樂饗購 3.3% 均有效（最穩）" :
+        mccLines.join('\n');
+      mccText.textContent = formatted;
+      mccBox.appendChild(mccText);
+      div.appendChild(mccBox);
+    }
+  }
   if(s.mall)div.appendChild(el("div",{className:"box",style:{background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.3)"}},
     [el("div",{style:{fontSize:"12px",fontWeight:"700",color:"#fbbf24",marginBottom:"4px"}},"✈ 航空Mall"),
      el("div",{style:{fontSize:"13px",color:"#fde68a"}},s.mall.note)]));
