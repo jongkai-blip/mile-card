@@ -650,7 +650,168 @@ async function liveSearchPromos(merchant){
 
 let ST={tab:"search",query:"",sel:null,results:[],expG:null,expS:null,
   llm:null,loading:false,live:null,liveLoading:false,promoForm:false,
-  goal:localStorage.getItem("mile_goal")||"eva"};
+  goal:localStorage.getItem("mile_goal")||"eva",
+  monthlyCheck:null, monthlyChecking:false};
+
+// ─── 每月自動稽核系統 ─────────────────────────────────────────
+const MONTHLY_CHECK_KEY = "mile_monthly_check";
+const MONTHLY_TS_KEY    = "mile_monthly_ts";
+
+// 稽核的三大查詢（CUBE通路、Unicard百大、NCCC常見商家）
+const MONTHLY_QUERIES = [
+  {
+    id: "cube",
+    label: "CUBE 卡通路",
+    prompt: `搜尋「國泰世華CUBE卡 2026 最新通路 樂饗購 玩數位 集精選 變動」，
+列出2026年上半年最新：
+1. 樂饗購涵蓋哪些通路（餐廳/百貨），有刪除哪些？
+2. 玩數位涵蓋哪些通路，有刪除哪些？
+3. 集精選新增哪些？
+JSON格式：{"plan_changes":[{"plan":"方案名","added":[""],"removed":[""]}],"summary":"重點變動","checked_date":"YYYY-MM"}`
+  },
+  {
+    id: "unicard",
+    label: "Unicard 百大特店",
+    prompt: `搜尋「玉山Unicard 2026 百大特店 最新通路 變動 新增 刪除」，
+列出2026年上半年最新百大特店變動：
+1. 餐飲類新增/刪除（如：星巴克/康是美等是否仍在）
+2. 電商類新增/刪除（如博客來狀態）
+3. 任何新增或重大刪除
+JSON格式：{"changes":[{"category":"分類","added":[""],"removed":[""]}],"summary":"重點變動","checked_date":"YYYY-MM"}`
+  },
+  {
+    id: "nccc",
+    label: "NCCC 新增商家",
+    prompt: `搜尋「NCCC小額支付 台灣 2025 2026 新增商家 刷卡無回饋 連鎖餐廳」，
+列出2025-2026年新加入NCCC小額支付的知名商家（意味著直刷信用卡無回饋）：
+JSON格式：{"new_nccc_merchants":["商家1","商家2"],"still_nccc":["已知的","商家"],"summary":"說明","checked_date":"YYYY-MM"}`
+  }
+];
+
+function shouldRunMonthlyCheck(){
+  const ts = localStorage.getItem(MONTHLY_TS_KEY);
+  if(!ts) return true;
+  const lastCheck = new Date(parseInt(ts));
+  const now = new Date();
+  return lastCheck.getMonth() !== now.getMonth() || lastCheck.getFullYear() !== now.getFullYear();
+}
+
+async function runMonthlyCheck(){
+  const key = getKey();
+  if(!key || ST.monthlyChecking) return;
+  ST.monthlyChecking = true;
+  render();
+
+  const results = {};
+  for(const q of MONTHLY_QUERIES){
+    try{
+      const resp = await fetch(apiEndpoint(),{
+        method:"POST",
+        headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
+        body: JSON.stringify({
+          model:"claude-sonnet-4-20250514", max_tokens:1200,
+          tools:[{type:"web_search_20250305",name:"web_search"}],
+          messages:[{role:"user",content:q.prompt}]
+        })
+      });
+      const d = await resp.json();
+      const text = d.content?.filter(b=>b.type==="text").map(b=>b.text).join("") || "";
+      try{ results[q.id] = JSON.parse(text.replace(/```json|```/g,"").trim()); }
+      catch{ results[q.id] = {summary: text.slice(0,300), error:true}; }
+    } catch(e){
+      results[q.id] = {summary:`查詢失敗：${e.message}`, error:true};
+    }
+    await new Promise(r=>setTimeout(r,1000));
+  }
+
+  const checkResult = {
+    ts: Date.now(),
+    date: new Date().toLocaleDateString("zh-TW",{year:"numeric",month:"long",day:"numeric"}),
+    results
+  };
+  localStorage.setItem(MONTHLY_CHECK_KEY, JSON.stringify(checkResult));
+  localStorage.setItem(MONTHLY_TS_KEY, String(Date.now()));
+  ST.monthlyCheck = checkResult;
+  ST.monthlyChecking = false;
+  render();
+}
+
+// 載入儲存的稽核結果
+function loadMonthlyCheck(){
+  const raw = localStorage.getItem(MONTHLY_CHECK_KEY);
+  if(raw){ try{ ST.monthlyCheck = JSON.parse(raw); }catch{} }
+}
+
+// 渲染稽核結果 banner
+function renderMonthlyCheckBanner(){
+  if(!ST.monthlyChecking && !ST.monthlyCheck && !shouldRunMonthlyCheck()) return null;
+  const div = el("div",{});
+
+  if(ST.monthlyChecking){
+    const banner = el("div",{style:{padding:"14px 16px",background:"rgba(129,140,248,0.1)",
+      border:"1px solid rgba(129,140,248,0.35)",borderRadius:"12px",marginBottom:"12px"}});
+    banner.appendChild(el("div",{style:{fontSize:"13px",fontWeight:"700",color:"#a5b4fc",marginBottom:"6px"}},
+      "⏳ 每月自動稽核進行中..."));
+    banner.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280"}},
+      "正在用 web_search 搜尋 CUBE / Unicard 最新通路變動..."));
+    // 進度動畫
+    const bar = el("div",{style:{height:"3px",background:"rgba(129,140,248,0.2)",borderRadius:"2px",marginTop:"8px"}});
+    const fill = el("div",{style:{height:"100%",background:"#818cf8",borderRadius:"2px",
+      width:"60%",animation:"pulse 1.5s infinite"}});
+    bar.appendChild(fill); banner.appendChild(bar);
+    div.appendChild(banner);
+    return div;
+  }
+
+  if(shouldRunMonthlyCheck() && !ST.monthlyChecking){
+    const key = getKey();
+    const now = new Date();
+    const banner = el("div",{style:{padding:"14px 16px",background:"rgba(245,158,11,0.08)",
+      border:"1px solid rgba(245,158,11,0.4)",borderRadius:"12px",marginBottom:"12px",cursor: key?"pointer":"default"},
+      onClick: key ? runMonthlyCheck : null});
+    banner.appendChild(el("div",{style:{fontSize:"13px",fontWeight:"700",color:"#fbbf24",marginBottom:"6px"}},
+      `📅 ${now.toLocaleDateString("zh-TW",{month:"long",day:"numeric"})} — 每月通路稽核待執行`));
+    banner.appendChild(el("div",{style:{fontSize:"12px",color:"#9ca3af",marginBottom:key?"8px":"0"}},
+      "CUBE/Unicard通路每季會變動，點此自動搜尋最新變動"));
+    if(key){
+      const btn = el("button",{onClick:(e)=>{e.stopPropagation();runMonthlyCheck();},
+        style:{padding:"6px 14px",background:"rgba(245,158,11,0.25)",border:"1px solid rgba(245,158,11,0.5)",
+          borderRadius:"8px",color:"#fbbf24",fontSize:"12px",fontWeight:"700",cursor:"pointer"}},
+        "🔍 立即執行稽核");
+      banner.appendChild(btn);
+    } else {
+      banner.appendChild(el("div",{style:{fontSize:"11px",color:"#4b5563"}},"（需先設定 API Key）"));
+    }
+    div.appendChild(banner);
+  }
+
+  if(ST.monthlyCheck && !shouldRunMonthlyCheck()){
+    const mc = ST.monthlyCheck;
+    const summary = el("div",{style:{padding:"12px 14px",background:"rgba(74,222,128,0.06)",
+      border:"1px solid rgba(74,222,128,0.25)",borderRadius:"12px",marginBottom:"12px"}});
+    const hd = el("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"8px"}});
+    hd.appendChild(el("span",{style:{fontSize:"13px",fontWeight:"700",color:"#4ade80"}},`✅ 本月稽核完成`));
+    hd.appendChild(el("span",{style:{fontSize:"11px",color:"#6b7280",marginLeft:"auto"}},[document.createTextNode(mc.date)]));
+    summary.appendChild(hd);
+    // Show summaries from each query
+    MONTHLY_QUERIES.forEach(q=>{
+      const r = mc.results?.[q.id];
+      if(!r) return;
+      const row = el("div",{style:{marginBottom:"6px",padding:"8px 10px",background:"rgba(255,255,255,0.03)",borderRadius:"8px"}});
+      row.appendChild(el("div",{style:{fontSize:"12px",fontWeight:"700",color:"#9ca3af",marginBottom:"3px"}},q.label));
+      row.appendChild(el("div",{style:{fontSize:"12px",color:r.error?"#fca5a5":"#6b7280",lineHeight:"1.5"}},
+        r.summary?.slice(0,200) || "—"));
+      summary.appendChild(row);
+    });
+    // Button to re-run
+    const re = el("button",{onClick:runMonthlyCheck,
+      style:{marginTop:"6px",padding:"5px 12px",background:"transparent",border:"1px solid rgba(74,222,128,0.3)",
+        borderRadius:"8px",color:"#4ade80",fontSize:"11px",cursor:"pointer"}}, "↺ 重新查詢");
+    summary.appendChild(re);
+    div.appendChild(summary);
+  }
+  return div;
+}
 
 const GOALS=[
   {id:"eva",  label:"長榮哩程", icon:"🦅", airlines:["長榮","Infinity","eva"]},
@@ -1453,6 +1614,12 @@ function render(){
     if(!getKey())cnt.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginBottom:"10px"}},
       ["🔑 AI功能需設定 API Key ",el("button",{onClick:()=>showKeyModal(doLLM),style:{fontSize:"12px",color:"#818cf8",background:"none",border:"none",textDecoration:"underline"}},"設定")]));
 
+    // ── 每月稽核橫幅（搜尋為空時顯示）──
+    if(!ST.query.trim()){
+      const mcb = renderMonthlyCheckBanner();
+      if(mcb) cnt.appendChild(mcb);
+    }
+
     // ── Dynamic results area ──
     const rd=el("div",{id:"search-results"});
     renderSearchResultsInto(rd);
@@ -1509,6 +1676,7 @@ function render(){
     border:"none",fontSize:"24px",boxShadow:"0 4px 20px rgba(0,0,0,0.5)",zIndex:"50"}},"🔑"));
   // Don't re-focus on render() — only set focus on first load to avoid keyboard jump
 }
+loadMonthlyCheck();
 render();
 </script>
 </body>
