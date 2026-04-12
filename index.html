@@ -399,6 +399,12 @@ const SCENARIOS=[
    tip:"CUBE切換玩數位3%（8.33哩/百元）最高；策略固定時改LINE Pay→Unicard 3.5%（5.25哩）次選。",
    warn:"⚠ CUBE策略固定集精選→串流0.3%。切換玩數位或改Unicard LINE Pay"},
   // 網購
+  {id:"pchome",name:"PChome 網路購物",icon:"🛒",group:"網購",parent:"domestic",
+   kw:["pchome","pchome 24h","pchome24h","網路購物","pchome購物"],
+   rewards:[R.uni_35,R.cb_3,R.ri_33,R.hs_18,R.br_20,R.jx_20,R.ci_18],
+   excl:"【Unicard ✅ PChome 24h 在百大電商特店】\n→ PChome 24h購物 & PChome 24h書店：任意選3.5%（5.25哩）\n→ 直刷Unicard（PChome在百大）→簡單選3%；任意選3.5%\n⚠️ 僅限 PChome 24h購物/書店。不含：PChome旅遊、露天拍賣\n\n【CUBE ✅ 玩數位3%（PChome在玩數位通路）】\n→ 切換「玩數位」3%→8.33哩/百元\n⚠️ PChome儲值/電子票券不給予3%回饋（排除儲值類）\n⚠️ 需每日切換，且CUBE本身換哩效率較低\n\n【Richart ✅ 數趣刷3.3%（PChome在指定網購）】\n→ 切換「數趣刷」3.3%→折帳單用，換哩效率差\n\n【哩程卡】PChome為國內台幣消費→按各卡國內一般消費哩程計算\n→ 星宇20元/哩（5哩/百元）；長榮22元/哩（4.55哩）；中信18元/哩（5.56哩）",
+   pay:[{m:"Unicard直刷（PChome在百大✅）",n:"任意選3.5%（PChome 24h）→5.25哩/百元"},{m:"CUBE玩數位↻切換",n:"3%→8.33哩/百元，但換哩效率不如Unicard"}],
+   tip:"PChome 24h：Unicard任意選直刷3.5%（最穩最高）。或CUBE玩數位3%（需切換）。不含PChome旅遊/露天拍賣。"},
   {id:"shopee",name:"蝦皮購物",icon:"🛍️",group:"網購",parent:"domestic",
    kw:["shopee","蝦皮"],
    rewards:[R.uni_35,R.cb_3,R.hs_18,R.ri_2,R.ci_18,R.br_20,R.jx_20],
@@ -959,6 +965,47 @@ function rrow(r,rank){
 }
 function spanel(s){
   const div=el("div",{});
+
+  // ── 🥇 第一名推薦（頁面頂部即可見）──────────────────────────
+  {
+    const sortedRs=[...s.rewards].sort((a,b)=>getGoalScore(b)-getGoalScore(a));
+    const best=sortedRs.find(r=>{
+      if(!CARDS[r.id]||r.score===0) return false;
+      const isBypass=r.id==="unicard"&&r.bypassOnly===true;
+      const isNoplan=r.id==="cube"&&r.score<=6&&!r.note?.includes("↻");
+      return !isBypass&&!isNoplan;
+    })||sortedRs.find(r=>CARDS[r.id]&&r.score>0);
+    if(best&&best.score>0){
+      const bc=CARDS[best.id];
+      const gl=goalLabel();
+      const topCard=el("div",{style:{borderRadius:"14px",padding:"14px 16px",marginBottom:"12px",
+        background:`linear-gradient(135deg,${bc.color}18,${bc.color}06)`,
+        border:`2px solid ${bc.color}55`,position:"relative",overflow:"hidden"}});
+      const stripe=el("div",{style:{position:"absolute",left:"0",top:"0",bottom:"0",width:"4px",background:bc.color}});
+      topCard.appendChild(stripe);
+      const r1=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"8px"}});
+      r1.appendChild(el("span",{style:{fontSize:"20px"}},"🥇"));
+      r1.appendChild(el("span",{style:{fontSize:"11px",color:bc.color,fontWeight:"800",letterSpacing:"2px"}},"最佳推薦"));
+      r1.appendChild(el("span",{style:{marginLeft:"auto",fontSize:"11px",color:"#6b7280"}},[document.createTextNode(`${gl.icon} ${gl.label}`)]));
+      topCard.appendChild(r1);
+      const r2=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
+      r2.appendChild(ctag(best.id));
+      r2.appendChild(el("span",{style:{fontSize:"17px",fontWeight:"800",color:bc.color}},bc.short));
+      if(best.mode){const mb=modeBadge(best.mode);if(mb)r2.appendChild(mb);}
+      topCard.appendChild(r2);
+      const r3=el("div",{style:{display:"flex",alignItems:"baseline",gap:"6px",marginTop:"8px"}});
+      if(best.m100>0){
+        r3.appendChild(el("span",{style:{fontSize:"30px",fontWeight:"900",color:bc.color,lineHeight:"1"}},[document.createTextNode(`${best.m100.toFixed(best.m100===Math.floor(best.m100)?0:2)}哩`)]));
+        r3.appendChild(el("span",{style:{fontSize:"13px",color:"#6b7280"}},"/ 每百元"));
+      } else {
+        r3.appendChild(el("span",{style:{fontSize:"22px",fontWeight:"800",color:bc.color}},best.text));
+      }
+      topCard.appendChild(r3);
+      if(best.note) topCard.appendChild(el("div",{style:{fontSize:"12px",color:"#9ca3af",marginTop:"6px",lineHeight:"1.5"}},best.note));
+      if(best.method&&best.method!=="—") topCard.appendChild(el("div",{style:{fontSize:"12px",color:bc.color+"99",marginTop:"4px",fontWeight:"600"}},`💳 ${best.method}`));
+      div.appendChild(topCard);
+    }
+  }
 
   // ── 刷卡機歸屬警示：百貨/餐廳 ─────────────────────────────
   const hasMCC = s.excl && s.excl.includes('MCC');
@@ -1573,29 +1620,10 @@ function render(){
   const app=document.getElementById("app");app.innerHTML="";
   const wrap=el("div",{});
 
-  // Header
-  const hdr=el("div",{style:{padding:"20px 18px 14px",background:"linear-gradient(160deg,#0e1524,#111827)"}});
-  hdr.appendChild(el("div",{style:{fontSize:"11px",letterSpacing:"4px",color:"#6b7280",textTransform:"uppercase",marginBottom:"4px"}},"Mileage Optimizer v3.8"));
+  // Header — compact, no goal bar
+  const hdr=el("div",{style:{padding:"14px 18px 10px",background:"linear-gradient(160deg,#0e1524,#111827)"}});
   hdr.appendChild(el("div",{style:{fontSize:"22px",fontWeight:"700"}},"哩程刷卡智慧助理"));
-  hdr.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginTop:"3px"}},"每百元換哩精算 · 促銷管理 · AI促銷查詢"));
-  // ── 回饋目標選擇器 ─────────────────────────────────────────
-  const goalBar=el("div",{style:{display:"flex",gap:"6px",marginTop:"10px",flexWrap:"wrap"}});
-  goalBar.appendChild(el("div",{style:{fontSize:"11px",color:"#6b7280",alignSelf:"center",marginRight:"2px",flexShrink:"0"}},"目標："));
-  GOALS.forEach(g=>{
-    const active=ST.goal===g.id;
-    const btn=el("button",{onClick:()=>{
-      ST.goal=g.id;
-      localStorage.setItem("mile_goal",g.id);
-      render();
-    },style:{
-      padding:"4px 11px",borderRadius:"20px",border:`1px solid ${active?"#818cf8":"rgba(255,255,255,0.1)"}`,
-      background:active?"rgba(99,102,241,0.3)":"rgba(255,255,255,0.04)",
-      color:active?"#a5b4fc":"#6b7280",fontSize:"12px",fontWeight:active?"700":"400",
-      cursor:"pointer",whiteSpace:"nowrap"
-    }},`${g.icon} ${g.label}`);
-    goalBar.appendChild(btn);
-  });
-  hdr.appendChild(goalBar);
+  hdr.appendChild(el("div",{style:{fontSize:"11px",color:"#6b7280",marginTop:"2px"}},"每百元換哩精算 · AI促銷查詢"));
   wrap.appendChild(hdr);
 
   // Tabs
@@ -1615,6 +1643,34 @@ function render(){
 
   if(ST.tab==="strategy"){wrap.appendChild(strategyPanel());app.appendChild(wrap);return;}
   if(ST.tab==="promo"){wrap.appendChild(promoTab());app.appendChild(wrap);return;}
+
+  // ── 側邊目標選擇器（右側浮動）─────────────────────────────
+  const goalSide=el("div",{style:{
+    position:"fixed",right:"0",top:"50%",transform:"translateY(-50%)",
+    zIndex:"40",display:"flex",flexDirection:"column",gap:"2px",
+    background:"rgba(10,13,20,0.92)",border:"1px solid rgba(255,255,255,0.1)",
+    borderRight:"none",borderRadius:"12px 0 0 12px",padding:"6px 4px",
+    boxShadow:"-4px 0 20px rgba(0,0,0,0.5)"}});
+  const gl=goalLabel();
+  goalSide.appendChild(el("div",{style:{fontSize:"9px",color:"#4b5563",textAlign:"center",
+    letterSpacing:"1px",marginBottom:"4px",writingMode:"horizontal-tb",padding:"0 2px"}},"目標"));
+  GOALS.forEach(g=>{
+    const active=ST.goal===g.id;
+    const btn=el("button",{onClick:()=>{
+      ST.goal=g.id;localStorage.setItem("mile_goal",g.id);render();
+    },style:{
+      width:"32px",height:"32px",borderRadius:"8px",border:"none",
+      background:active?"rgba(99,102,241,0.4)":"transparent",
+      fontSize:"18px",cursor:"pointer",display:"flex",alignItems:"center",
+      justifyContent:"center",transition:"background .15s",
+      outline:active?"1px solid rgba(129,140,248,0.6)":"none"
+    },title:g.label},g.icon);
+    goalSide.appendChild(btn);
+  });
+  // Current goal label
+  goalSide.appendChild(el("div",{style:{fontSize:"9px",color:"#a5b4fc",textAlign:"center",
+    marginTop:"4px",maxWidth:"32px",wordBreak:"keep-all",lineHeight:"1.2",fontWeight:"700"}},[document.createTextNode(gl.label.replace("哩程","哩"))]));
+  wrap.appendChild(goalSide);
 
   const cnt=el("div",{style:{padding:"16px 16px 60px"}});
 
