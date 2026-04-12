@@ -358,6 +358,21 @@ const SCENARIOS=[
    pay:[{m:"CUBE樂饗購↻切換",n:"切換後9.17哩/百元，此場域最高"},{m:"LINE Pay+Unicard任意選",n:"策略固定：5.25哩/百元"}],
    tip:"CUBE切換樂饗購→9.17哩/百元（最高）；策略固定時集精選2%（5.56哩）或Unicard LINE Pay（5.25哩）。"},
   // 航空
+  // ── 大創 Daiso ──────────────────────────────────────────────
+  {id:"daiso",name:"大創 Daiso",icon:"🛍️",group:"百貨/購物",parent:"domestic",
+   kw:["daiso","大創","大創百貨"],
+   rewards:[R.uni_lp,R.cb_2,R.hs_18,R.ri_33,R.br_20,R.jx_20,R.ci_18],
+   excl:"【CUBE 歸類：集精選 2%（非樂饗購）】\n大創屬一般生活零售，不在CUBE「樂饗購」（餐廳+百貨）通路內\n→ CUBE只能用「集精選」2%→5.56哩/百元\n→ 切換「樂饗購」或「玩數位」均不涵蓋大創\n\n【Unicard LINE Pay 任意選3.5%】\n大創實體門市支援LINE Pay ✅\n→ 用LINE Pay付→Unicard任意選第1家→3.5%（5.25哩）\n→ 直刷Unicard=1%（極差，務必改LINE Pay）\n\n【其他卡】\n匯豐旅人：一般消費18元/哩（5.56哩），無排除大創\n星宇/長榮/中信：一般消費20/22/18元/哩，無特別加成",
+   pay:[{m:"LINE Pay（任意選第1家）",n:"大創支援LINE Pay→Unicard 3.5%（5.25哩）"},{m:"CUBE集精選",n:"直刷2%→5.56哩（策略固定時）"}],
+   tip:"大創推薦：LINE Pay→Unicard任意選3.5%（5.25哩）；或CUBE集精選2%（5.56哩）。不可切換樂饗購。"},
+  // ── 寶雅 POYA ────────────────────────────────────────────────
+  {id:"poya",name:"寶雅 POYA",icon:"💄",group:"百貨/購物",parent:"domestic",
+   kw:["poya","寶雅","寶雅生活館"],
+   rewards:[R.uni_lp,R.cb_2,R.hs_18,R.ri_33,R.br_20,R.jx_20,R.ci_18],
+   excl:"【CUBE 歸類：集精選 2%（樂饗購已刪除寶雅）】\n⚠️ 2024Q3 CUBE「樂饗購」正式刪除寶雅！\n→ CUBE在寶雅只剩「集精選」2%→5.56哩/百元\n→ 切換「樂饗購」無法在寶雅加碼\n\n【Unicard LINE Pay 任意選3.5%】\n寶雅支援LINE Pay ✅ →用LINE Pay付→3.5%（5.25哩）\n→ 直刷Unicard=1%，必須改LINE Pay\n\n【部分寶雅在百貨內⚠️】\n如寶雅崇光/大江/高島屋天母/大遠百等共18間在百貨內\n→ 走百貨統一刷卡機→MCC5311百貨\n→ CUBE集精選仍算（涵蓋百貨）；Richart玩旅刷不算\n→ 這些分店不在CUBE活動優惠名單（官方有另列排除門市）",
+   pay:[{m:"LINE Pay（任意選第1家）",n:"寶雅支援LINE Pay→Unicard 3.5%（5.25哩）"},{m:"CUBE集精選",n:"直刷2%→5.56哩（策略固定時）"}],
+   warn:"⚠️ 寶雅在百貨內的門市（大江/崇光/高島屋等18間）走百貨MCC，部分回饋不同",
+   tip:"寶雅推薦：LINE Pay→Unicard任意選3.5%（5.25哩）；或CUBE集精選2%（5.56哩）。CUBE樂饗購已刪除寶雅！"},
   {id:"jx_ticket",name:"星宇航空購票",icon:"🌟",group:"航空購票",parent:"airline",
    kw:["星宇","starlux","jx"],
    rewards:[R.jx_sp,R.hs_18,R.uni_lp,R.cb_travel,R.ri_33,R.br_20,R.ci_18],
