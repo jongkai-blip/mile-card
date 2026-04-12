@@ -106,9 +106,10 @@ const R={
   // ── Unicard e point（200點→300哩長榮/亞萬）──
   uni_none:{id:"unicard",text:"❌ 無回饋",score:0, m100:0,    airline:"—",             note:"排除：超商/全聯/電信/水電/稅費",method:"—",mode:null},
   uni_1:  {id:"unicard",text:"1%→1.5哩/百元",score:2,m100:1.5,airline:"長榮/亞萬",  note:"非8家指定特店，1%→200點換300哩",method:"基本",mode:"超出任意選"},
-  uni_lp: {id:"unicard",text:"3.5%→5.25哩/百元",score:8,m100:5.25,airline:"長榮/亞萬",note:"LINE Pay任意選3.5%→200點換300哩，每百元5.25哩",method:"LINE Pay+任意選",mode:"任意選"},
-  uni_35: {id:"unicard",text:"3.5%→5.25哩/百元",score:8,m100:5.25,airline:"長榮/亞萬",note:"任意選8家直刷3.5%→200點換300哩，每百元5.25哩",method:"任意選",mode:"任意選"},
-  uni_ww: {id:"unicard",text:"3.5%→5.25哩/百元",score:8,m100:5.25,airline:"長榮/亞萬",note:"王品瘋Pay任意選3.5%→每百元5.25哩",method:"王品瘋Pay+任意選",mode:"任意選",warn:"⚠ 必須王品瘋Pay App，非直刷或LINE Pay"},
+  uni_lp: {id:"unicard",text:"3.5%→5.25哩/百元",score:8,m100:5.25,airline:"長榮/亞萬",note:"LINE Pay任意選3.5%→200點換300哩，每百元5.25哩",method:"LINE Pay+任意選",mode:"任意選",bypassOnly:true},
+  // bypassOnly:true 表示此商家本身不在Unicard百大，需LINE Pay繞道，直刷=1%
+  uni_35: {id:"unicard",text:"3.5%→5.25哩/百元",score:8,m100:5.25,airline:"長榮/亞萬",note:"任意選8家直刷3.5%→200點換300哩，每百元5.25哩",method:"任意選",mode:"任意選",bypassOnly:false},
+  uni_ww: {id:"unicard",text:"3.5%→5.25哩/百元",score:8,m100:5.25,airline:"長榮/亞萬",note:"王品瘋Pay任意選3.5%→每百元5.25哩",method:"王品瘋Pay+任意選",mode:"任意選",warn:"⚠ 必須王品瘋Pay App，非直刷或LINE Pay",bypassOnly:false},
   // ── Richart 台新Point（換哩差！建議折帳單）──
   // 長榮：11點→13哩；亞萬：2024/8停止；華航：11點→14哩
   ri_33:  {id:"ricard",text:"3.3%→3.9哩/百元⚠",score:5,m100:3.9,airline:"長榮（差）建議折帳單",note:"玩旅刷3.3%，換長榮11點→13哩=3.9哩/百元=25.6元/哩❌\n⚠ 建議折帳單（3.3%現金），不換哩程！",method:"玩旅刷→折帳單",mode:"玩旅刷"},
@@ -150,9 +151,10 @@ const SCENARIOS=[
    tip:"你目前七張卡均無法在Costco消費。如果常去Costco，建議單獨申辦台北富邦Costco聯名卡。"},
   {id:"carrefour",name:"家樂福",icon:"🛒",group:"量販/超市",parent:"domestic",
    kw:["家樂福","carrefour"],
-   rewards:[R.uni_lp,R.cb_33,R.hs_18,R.ri_2,R.br_20,R.jx_20,R.ci_18],
-   excl:"⚠ 家樂福已不在任意選8家中（改為蝦皮/momo）\n→ 改用LINE Pay付款→歸LINE Pay任意選→3.5%\n★ CUBE 切換「樂饗購」3.3% → 9.17哩/百元，需從集精選切換，用戶自行決定",
-   tip:"家樂福不在任意選8家，改用LINE Pay付款→3.5%。匯豐旅人直刷18元/哩次選。"},
+   rewards:[R.uni_lp,R.cb_2,R.hs_18,R.ri_2,R.br_20,R.jx_20,R.ci_18],
+   excl:"【CUBE：集精選 2%（家樂福是量販/超市，非樂饗購）】\n→ 家樂福不屬於餐廳或百貨，CUBE只有集精選2%（5.56哩）\n→ 勿切換「樂饗購」，家樂福不在其通路內\n\n【Unicard：家樂福在百大「量販生活」分類✅】\n→ 直刷Unicard可享百大加碼（簡單選+2%、任意選+3.5%）\n→ 用LINE Pay付款→Unicard任意選3.5%（5.25哩）",
+   pay:[{m:"Unicard任意選/LINE Pay",n:"家樂福在Unicard百大量販生活✅→直刷3.5%（需方案切換）"},{m:"CUBE集精選",n:"2%→5.56哩"}],
+   tip:"家樂福：Unicard任意選3.5%（在Unicard百大✅）；或CUBE集精選2%（5.56哩）。CUBE勿切換樂饗購。"},
   // 超商
   {id:"seven",name:"7-ELEVEN",icon:"🏪",group:"四大超商",parent:"domestic",
    kw:["7-11","7eleven","711","統一超商"],
@@ -888,25 +890,55 @@ function modeBadge(mode){
 function rrow(r,rank){
   const c=CARDS[r.id];if(!c)return null;
   const gs=getGoalScore(r);
-  const top=rank===0&&r.score>0;
+
+  // ── 正面表列警示判斷 ─────────────────────────────────────────
+  const isUnicardBypass     = r.id==="unicard" && r.bypassOnly===true;
+  const isCubeNoSpecialPlan = r.id==="cube" && r.score<=6 && !r.note?.includes("↻") && !r.mode?.includes("切換");
+
+  // 繞道/無正面表列→不讓它排名第1
+  const effectiveRank = (isUnicardBypass || isCubeNoSpecialPlan) && rank===0 ? 1 : rank;
+  const top = effectiveRank===0 && r.score>0;
+
   const row=el("div",{className:"row",style:{background:top?c.bg:"rgba(255,255,255,0.03)",
     border:`1px solid ${top?c.color+"44":"rgba(255,255,255,0.07)"}`}});
   row.appendChild(el("div",{className:"row-bar",style:{background:r.score>0?c.color:"#374151"}}));
-  row.appendChild(el("span",{style:{fontSize:rank<3?"20px":"14px",minWidth:"24px",textAlign:"center",marginLeft:"4px"}},MEDAL[rank]));
+  row.appendChild(el("span",{style:{fontSize:effectiveRank<3?"20px":"14px",minWidth:"24px",textAlign:"center",marginLeft:"4px"}},MEDAL[effectiveRank]));
   const info=el("div",{style:{flex:"1",minWidth:"0"}});
   const tl=el("div",{style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"3px",flexWrap:"wrap"}});
   tl.appendChild(ctag(r.id));
   tl.appendChild(el("span",{style:{fontSize:"14px",color:r.score>0?c.color:"#6b7280",fontWeight:"600"}},c.short));
   if(r.mode){const mb=modeBadge(r.mode);if(mb)tl.appendChild(mb);}
-  // Goal badge: show if this card is boosted by current goal
   if(gs>r.score&&r.score>0){
     const gl=goalLabel();
     tl.appendChild(el("span",{style:{fontSize:"10px",background:`rgba(250,204,21,0.2)`,
       color:"#fde047",border:"1px solid rgba(250,204,21,0.4)",borderRadius:"6px",padding:"1px 5px",fontWeight:"700"}},
       `★ ${gl.icon}目標`));
   }
+  // ⚠️ Unicard 非百大警示 badge
+  if(isUnicardBypass){
+    tl.appendChild(el("span",{style:{fontSize:"10px",background:"rgba(239,68,68,0.15)",
+      color:"#fca5a5",border:"1px solid rgba(239,68,68,0.35)",borderRadius:"6px",padding:"1px 5px",fontWeight:"700"}},
+      "⚠️ 非百大"));
+  }
+  // ⚠️ CUBE 無特別方案 badge
+  if(isCubeNoSpecialPlan){
+    tl.appendChild(el("span",{style:{fontSize:"10px",background:"rgba(245,158,11,0.15)",
+      color:"#fcd34d",border:"1px solid rgba(245,158,11,0.35)",borderRadius:"6px",padding:"1px 5px",fontWeight:"700"}},
+      "⚠️ 無特別方案"));
+  }
   info.appendChild(tl);
   info.appendChild(el("div",{style:{fontSize:"13px",color:"#9ca3af",lineHeight:"1.5"}},r.note));
+  // 警示說明行
+  if(isUnicardBypass){
+    info.appendChild(el("div",{style:{fontSize:"12px",color:"#fca5a5",marginTop:"4px",fontWeight:"600",
+      padding:"4px 8px",background:"rgba(239,68,68,0.08)",borderRadius:"6px"}},
+      "⚠️ 此商家不在Unicard百大 → 直刷Unicard=1%，必須改LINE Pay付款才有3.5%"));
+  }
+  if(isCubeNoSpecialPlan){
+    info.appendChild(el("div",{style:{fontSize:"12px",color:"#fcd34d",marginTop:"4px",fontWeight:"600",
+      padding:"4px 8px",background:"rgba(245,158,11,0.08)",borderRadius:"6px"}},
+      "⚠️ 此商家不在CUBE任何特別通路 → 切換任何方案均無加碼，僅一般消費0.3%"));
+  }
   if(r.warn)info.appendChild(el("div",{style:{fontSize:"12px",color:"#f59e0b",marginTop:"3px"}},r.warn));
   row.appendChild(info);
   const right=el("div",{style:{textAlign:"right",flexShrink:"0",minWidth:"90px"}});
@@ -921,7 +953,7 @@ function rrow(r,rank){
     right.appendChild(el("div",{style:{fontSize:"10px",color:r.score>0?c.color+"99":"#4b5563",marginTop:"1px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"95px"}},r.airline));
   }
   if(r.method&&r.method!=="—")right.appendChild(el("div",{style:{fontSize:"10px",color:"#4b5563",marginTop:"1px"}},r.method));
-  right.appendChild(sbar(gs)); // use goal-adjusted score for bar
+  right.appendChild(sbar(gs));
   row.appendChild(right);
   return row;
 }
@@ -948,6 +980,42 @@ function spanel(s){
     ]));
     div.appendChild(mccBox);
   }
+
+  // ── CUBE / Unicard 正面表列狀態 ──────────────────────────────
+  const cubeR = [...(s.rewards||[])].filter(r=>r.id==="cube").sort((a,b)=>b.score-a.score)[0];
+  const uniR  = [...(s.rewards||[])].filter(r=>r.id==="unicard").sort((a,b)=>b.score-a.score)[0];
+  const cubeInPlan  = cubeR && cubeR.score>=7; // 7+= 樂饗購/玩數位/趣旅行
+  const cubeOk      = cubeR && cubeR.score>=5 && cubeR.score<7; // 6=集精選, 5=EU
+  const uniInBaiDa  = uniR && !uniR.bypassOnly && uniR.score>=7;
+  const uniBypass   = uniR && uniR.bypassOnly===true;
+  const uniExcluded = uniR && uniR.score===0;
+
+  const statusBar = el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px",marginBottom:"12px"}});
+
+  // CUBE status
+  const cubeStatus = el("div",{style:{padding:"8px 10px",borderRadius:"10px",
+    background: cubeInPlan?"rgba(129,140,248,0.1)": cubeOk?"rgba(245,158,11,0.08)":"rgba(100,100,100,0.08)",
+    border: `1px solid ${cubeInPlan?"rgba(129,140,248,0.4)": cubeOk?"rgba(245,158,11,0.3)":"rgba(100,100,100,0.2)"}`}});
+  cubeStatus.appendChild(el("div",{style:{fontSize:"10px",color:"#6b7280",marginBottom:"3px"}},"CUBE 卡"));
+  cubeStatus.appendChild(el("div",{style:{fontSize:"12px",fontWeight:"800",
+    color: cubeInPlan?"#a5b4fc": cubeOk?"#fbbf24":"#6b7280"}},
+    cubeInPlan ? `✅ ${cubeR.method||"特別方案"}` :
+    cubeOk     ? `⚠️ 集精選2%（無特別方案）` :
+                 `❌ 無回饋/排除`));
+  statusBar.appendChild(cubeStatus);
+
+  // Unicard status
+  const uniStatus = el("div",{style:{padding:"8px 10px",borderRadius:"10px",
+    background: uniInBaiDa?"rgba(251,146,60,0.1)": uniBypass?"rgba(239,68,68,0.08)":"rgba(100,100,100,0.08)",
+    border: `1px solid ${uniInBaiDa?"rgba(251,146,60,0.4)": uniBypass?"rgba(239,68,68,0.25)":"rgba(100,100,100,0.2)"}`}});
+  uniStatus.appendChild(el("div",{style:{fontSize:"10px",color:"#6b7280",marginBottom:"3px"}},"Unicard"));
+  uniStatus.appendChild(el("div",{style:{fontSize:"12px",fontWeight:"800",
+    color: uniInBaiDa?"#fb923c": uniBypass?"#fca5a5":"#6b7280"}},
+    uniInBaiDa  ? `✅ 在百大特店（直刷有加碼）` :
+    uniBypass   ? `⚠️ 非百大 直刷=1%（LINE Pay繞道才3.5%）` :
+    uniExcluded ? `❌ 排除（無回饋）` : `—`));
+  statusBar.appendChild(uniStatus);
+  div.appendChild(statusBar);
 
   // ── 目前目標橫幅 ──────────────────────────────────────────
   const gl=goalLabel();
