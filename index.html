@@ -591,24 +591,35 @@ function promoCardColor(cardId){
 
 async function queryLLM(q){
   const key=getKey();if(!key)throw new Error("NO_KEY");
-  const sys=`你是台灣信用卡哩程優化助理。用戶持7張卡，已採用固定策略：
-CUBE→集精選（超商/全聯2%），Unicard→任意選8家（LINE Pay/高鐵/台鐵/Uber/UberEats/王品瘋Pay/蝦皮購物/momo購物網，均3.5%），Richart→玩旅刷（非JX/BR/CI航空及旅行社3.3%）
-其他4張：星宇世界卡（國內20/海外10/指定10×2），長榮無限卡（20/10/Expedia訂房8，排除保費），中信華航鼎尊（18/海外實體9，排除電信超商全聯稅費，保費可刷）
-匯豐旅人無限卡：國內18元/哩，海外（含網路交易外幣計價）10元/哩，無上限，無腦刷。✅保費有回饋（官方明確）✅海外含網路❌排除繳費類（水電/稅/電信代扣）❌分期無回饋
-重要：電信費七張卡均無哩程；超商/全聯只有CUBE集精選2%；Unicard任意選8家外直刷=1%，改LINE Pay=3.5%；王品必須王品瘋Pay；星巴克必須LINE Pay；保費推薦匯豐旅人18元/哩（長榮排除保費）；海外網購首選匯豐旅人10元/哩（最方便，含網路）
-針對「${q}」，考慮用戶策略後，JSON推薦（不含代碼塊）：
-{"category":"類別","recommendations":[{"rank":1,"card":"卡名","payment":"方式","reward":"回饋","reason":"說明含策略模式"}],"notes":"重要但書","mall_tip":null}`;
+  const sys=`你是台灣信用卡刷卡陷阱專家兼哩程優化助理，請用web_search搜尋最新資訊後再回答。
+
+用戶持7張卡，固定策略如下：
+CUBE→集精選（超商/全聯2%），Unicard→任意選8家（LINE Pay/高鐵/台鐵/Uber/UberEats/王品瘋Pay/蝦皮/momo，均3.5%）
+星宇世界卡（國內20/海外實體10），長榮無限卡（20/海外實體10/Expedia訂房8，排除保費）
+中信華航鼎尊（18/海外實體9，排除電信超商全聯稅費），匯豐旅人（18/海外含網路10）
+
+【最重要的陷阱，必須用web_search確認】
+1. 是否走NCCC小額支付（常見：八方雲集/麥當勞/50嵐/85度C等→直刷幾乎無回饋）
+2. CUBE哪個方案適用（玩數位已刪除博客來；樂饗購已刪除寶雅；需最新確認）
+3. Unicard百大特店是否在列（餐飲只含：王品/饗賓/瓦城/乾杯/漢來/鼎王/爭鮮/路易莎/摩斯；星巴克/康是美已刪除）
+4. 是否在百貨內（走百貨MCC而非餐廳MCC）
+
+請搜尋「${q} 信用卡 CUBE Unicard 回饋 2026」，然後回傳繁體中文JSON（不含代碼塊）：
+{"category":"類別","nccc":true/false,"cube_plan":"方案名","unicard_in_bai_da":true/false,
+"recommendations":[{"rank":1,"card":"卡名","payment":"方式","reward":"回饋","reason":"說明"}],
+"notes":"重要但書（含NCCC/CUBE/Unicard陷阱）","mall_tip":null}`;
   const resp=await fetch(apiEndpoint(),{
     method:"POST",
     headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
-    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:700,system:sys,
-      messages:[{role:"user",content:`「${q}」最佳刷卡方式`}]})
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1500,system:sys,
+      tools:[{type:"web_search_20250305",name:"web_search"}],
+      messages:[{role:"user",content:`請搜尋並分析「${q}」的刷卡陷阱與最佳策略`}]})
   });
   if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||resp.status);}
   const d=await resp.json();
-  const t=d.content?.[0]?.text||"";
+  const t=d.content?.filter(b=>b.type==="text").map(b=>b.text).join("")||"";
   try{return JSON.parse(t.replace(/```json|```/g,"").trim());}
-  catch{return{category:"AI分析",recommendations:[],notes:t,mall_tip:null};}
+  catch{return{category:"AI分析（含即時搜尋）",recommendations:[],notes:t,mall_tip:null};}
 }
 
 // ─── LIVE PROMO SEARCH (Anthropic API + web_search) ──────────
@@ -1289,10 +1300,25 @@ function renderSearchResultsInto(div){
     const ai=el("div",{});
     const ah=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px"}});
     ah.appendChild(document.createTextNode("🤖"));
-    ah.appendChild(el("span",{style:{fontSize:"15px",color:"#818cf8",fontWeight:"600"}},`AI分析：${ST.llm.category}`));
+    ah.appendChild(el("span",{style:{fontSize:"15px",color:"#818cf8",fontWeight:"600"}},`AI分析（即時搜尋）：${ST.llm.category}`));
     ah.appendChild(el("button",{onClick:()=>{ST.llm=null;render();},style:{marginLeft:"auto",background:"none",border:"none",color:"#6b7280",fontSize:"22px"}},"×"));
     ai.appendChild(ah);
-    if(ST.llm.notes)ai.appendChild(el("div",{className:"box",style:{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",color:"#fca5a5"}},`⚠ ${ST.llm.notes}`));
+    // ── 陷阱徽章 ──
+    const badges=[];
+    if(ST.llm.nccc===true) badges.push({t:"🚨 NCCC小額支付",c:"#ef4444",n:"直刷幾乎無回饋！建議改行動支付繞道"});
+    if(ST.llm.unicard_in_bai_da===false) badges.push({t:"⚠️ Unicard不在百大",c:"#f59e0b",n:"直刷Unicard=1%！需改LINE Pay任意選3.5%"});
+    if(ST.llm.cube_plan) badges.push({t:`CUBE：${ST.llm.cube_plan}`,c:"#818cf8",n:""});
+    if(badges.length){
+      const bb=el("div",{style:{display:"flex",gap:"6px",flexWrap:"wrap",marginBottom:"10px"}});
+      badges.forEach(b=>{
+        const badge=el("div",{style:{padding:"6px 10px",borderRadius:"8px",background:`${b.c}18`,border:`1px solid ${b.c}44`}});
+        badge.appendChild(el("div",{style:{fontSize:"12px",fontWeight:"700",color:b.c}},b.t));
+        if(b.n) badge.appendChild(el("div",{style:{fontSize:"11px",color:b.c+"bb",marginTop:"2px"}},b.n));
+        bb.appendChild(badge);
+      });
+      ai.appendChild(bb);
+    }
+    if(ST.llm.notes)ai.appendChild(el("div",{className:"box",style:{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",color:"#fca5a5",whiteSpace:"pre-wrap"}},`⚠ ${ST.llm.notes}`));
     (ST.llm.recommendations||[]).forEach((r,i)=>{
       const row=el("div",{style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"13px 14px",marginBottom:"7px"}});
       const top=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"5px"}});
