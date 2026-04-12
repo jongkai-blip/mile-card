@@ -399,6 +399,28 @@ const SCENARIOS=[
    excl:"★ 匯豐旅人：外幣計價即可，網路交易同樣10元/哩（這是優勢！）\n❌ 中信華航：2024/10後海外網購無雙倍，退回18元/哩",
    tip:"海外網購首選：匯豐旅人10元/哩（外幣計價均有，最方便）；星宇世界卡10元/哩次選。",
    warn:"⚠ 中信華航海外網購已無9元/哩！"},
+  // ── 日本特定購物場域 ──────────────────────────────────────────
+  {id:"donki",name:"唐吉訶德 DONKI",icon:"🐧",group:"海外－日本",parent:"overseas",
+   kw:["唐吉訶德","donki","don quijote","donquijote","ドンキ","驚安殿堂"],
+   rewards:[R.ci_9,R.jx_10,R.hs_10,
+     {id:"cube",text:"3%（趣旅遊）",score:7,m100:8.33,airline:"長榮Infinity",note:"出國臨時切換CUBE趣旅遊，3%小樹點換長榮8.33哩",method:"趣旅遊↻",mode:"出國例外"},
+     R.br_sp,R.ri_33,R.uni_1],
+   excl:"💡 DONKI在日本屬大型零售商，刷卡機為店家獨立機器→算海外實體消費→各海外哩程卡正常計算\n✅ 中信華航9元/哩（11.1哩/百元）最高，直入華夏哩程\n✅ 星宇/匯豐旅人10元/哩次選\n📌 外幣計價（日圓）→刷卡即算海外\n⚠ 注意：現場有優惠券（免稅）記得索取！",
+   tip:"唐吉訶德日本：中信華航9元/哩（11.1哩）最高→華夏哩；匯豐旅人/星宇10元/哩次選。"},
+  {id:"bic_camera",name:"BIC Camera / Yodobashi",icon:"📷",group:"海外－日本",parent:"overseas",
+   kw:["bic camera","bic","biccamera","yodobashi","yodobashi camera","淀橋","ビックカメラ","ヨドバシ","日本電器","sakuraya","sofmap","laox"],
+   rewards:[R.ci_9,R.jx_10,R.hs_10,
+     {id:"cube",text:"3%（趣旅遊）",score:7,m100:8.33,airline:"長榮Infinity",note:"趣旅遊3%→8.33哩，出國臨時切換",method:"趣旅遊↻",mode:"出國例外"},
+     R.br_sp,R.ri_33,R.uni_1],
+   excl:"💡 日本電器量販店（獨立刷卡機）→海外實體消費→哩程正常累積\n✅ 中信華航9元/哩（11.1哩/百元）最高\n📌 JCB卡在BIC Camera/Yodobashi有額外5%回饋優惠，但您持有的七張卡均無JCB版\n⚠ 現場記得辦免稅（Tax Free），5,000日圓以上可退8%消費稅",
+   tip:"BIC Camera/Yodobashi：中信華航9元/哩（11.1哩）最高→華夏哩；匯豐旅人10元/哩次選。"},
+  {id:"aeon_japan",name:"AEON（日本）",icon:"🛒",group:"海外－日本",parent:"overseas",
+   kw:["aeon","aeon japan","イオン","aeon mall","永旺","aeon超市","まいばすけっと"],
+   rewards:[R.ci_9,R.jx_10,R.hs_10,
+     {id:"cube",text:"3%（趣旅遊）",score:7,m100:8.33,airline:"長榮Infinity",note:"趣旅遊3%→8.33哩，出國臨時切換",method:"趣旅遊↻",mode:"出國例外"},
+     R.br_sp,R.ri_33,R.uni_1],
+   excl:"💡 AEON為日本最大超市/百貨集團，信用卡刷卡正常→海外實體消費→哩程正常累積\n✅ 中信華航9元/哩（11.1哩/百元）最高\n✅ 匯豐旅人/星宇 10元/哩次選\n📌 AEON自家卡（イオンカード）有5%折扣，但非台灣發卡不適用\n💴 外幣計價（日圓）→自動算海外消費",
+   tip:"AEON日本：中信華航9元/哩（11.1哩）最高→華夏哩；匯豐旅人/星宇10元/哩次選。"},
 ];
 
 // search index
@@ -507,7 +529,45 @@ async function liveSearchPromos(merchant){
 }
 
 let ST={tab:"search",query:"",sel:null,results:[],expG:null,expS:null,
-  llm:null,loading:false,live:null,liveLoading:false,promoForm:false};
+  llm:null,loading:false,live:null,liveLoading:false,promoForm:false,
+  goal:localStorage.getItem("mile_goal")||"eva"};
+
+const GOALS=[
+  {id:"eva",  label:"長榮哩程", icon:"🦅", airlines:["長榮","Infinity","eva"]},
+  {id:"china",label:"華航哩程", icon:"✈️", airlines:["華航","華夏","CI","china"]},
+  {id:"asia", label:"亞萬哩程", icon:"🌏", airlines:["亞萬","Asia","cathay","16+"]},
+  {id:"cash", label:"現金折帳", icon:"💰", airlines:["現金","cash","Point","折帳"]},
+];
+
+function getGoalScore(r){
+  const g=ST.goal;
+  if(g==="eva") return r.score;
+  if(g==="china"){
+    if(r.id==="ci") return r.score+3;        // 華航直入華夏，最強
+    if(r.id==="hsbc") return r.score+1;      // 匯豐可換中華航空
+    if(r.id==="starlux") return r.score-2;   // 只能換星宇
+    if(r.id==="eva") return r.score-2;       // 只能換長榮
+    return r.score;
+  }
+  if(g==="asia"){
+    if(r.id==="hsbc") return r.score+3;      // 匯豐16+含國泰(亞萬)，最強
+    if(r.id==="unicard") return r.score+2;   // Unicard可換亞萬
+    if(r.id==="starlux") return r.score-2;   // 只能換星宇
+    if(r.id==="ci") return r.score-1;        // 只換華夏
+    return r.score;
+  }
+  if(g==="cash"){
+    if(r.id==="ricard") return r.score+5;    // Richart折帳單最強現金
+    if(r.id==="cube") return r.score+2;      // 小樹點可折帳
+    if(r.id==="unicard") return r.score+1;   // e-point可折帳
+    return r.score;
+  }
+  return r.score;
+}
+
+function goalLabel(){
+  return GOALS.find(g=>g.id===ST.goal)||GOALS[0];
+}
 const MEDAL=["🏆","🥈","🥉","④","⑤","⑥"];
 
 function el(tag,at,ch){
@@ -546,6 +606,7 @@ function modeBadge(mode){
 }
 function rrow(r,rank){
   const c=CARDS[r.id];if(!c)return null;
+  const gs=getGoalScore(r);
   const top=rank===0&&r.score>0;
   const row=el("div",{className:"row",style:{background:top?c.bg:"rgba(255,255,255,0.03)",
     border:`1px solid ${top?c.color+"44":"rgba(255,255,255,0.07)"}`}});
@@ -556,12 +617,18 @@ function rrow(r,rank){
   tl.appendChild(ctag(r.id));
   tl.appendChild(el("span",{style:{fontSize:"14px",color:r.score>0?c.color:"#6b7280",fontWeight:"600"}},c.short));
   if(r.mode){const mb=modeBadge(r.mode);if(mb)tl.appendChild(mb);}
+  // Goal badge: show if this card is boosted by current goal
+  if(gs>r.score&&r.score>0){
+    const gl=goalLabel();
+    tl.appendChild(el("span",{style:{fontSize:"10px",background:`rgba(250,204,21,0.2)`,
+      color:"#fde047",border:"1px solid rgba(250,204,21,0.4)",borderRadius:"6px",padding:"1px 5px",fontWeight:"700"}},
+      `★ ${gl.icon}目標`));
+  }
   info.appendChild(tl);
   info.appendChild(el("div",{style:{fontSize:"13px",color:"#9ca3af",lineHeight:"1.5"}},r.note));
   if(r.warn)info.appendChild(el("div",{style:{fontSize:"12px",color:"#f59e0b",marginTop:"3px"}},r.warn));
   row.appendChild(info);
   const right=el("div",{style:{textAlign:"right",flexShrink:"0",minWidth:"90px"}});
-  // Primary: miles per 100NT
   if(r.m100>0){
     right.appendChild(el("div",{style:{fontSize:"17px",fontWeight:"800",color:c.color,whiteSpace:"nowrap",lineHeight:"1.1"}},
       `${r.m100.toFixed(r.m100===Math.floor(r.m100)?0:2)}哩`));
@@ -569,35 +636,34 @@ function rrow(r,rank){
   } else {
     right.appendChild(el("div",{style:{fontSize:"14px",fontWeight:"700",color:"#4b5563",whiteSpace:"nowrap"}},r.text));
   }
-  // Airline label
   if(r.airline&&r.airline!=="—"){
     right.appendChild(el("div",{style:{fontSize:"10px",color:r.score>0?c.color+"99":"#4b5563",marginTop:"1px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"95px"}},r.airline));
   }
   if(r.method&&r.method!=="—")right.appendChild(el("div",{style:{fontSize:"10px",color:"#4b5563",marginTop:"1px"}},r.method));
-  right.appendChild(sbar(r.score));
+  right.appendChild(sbar(gs)); // use goal-adjusted score for bar
   row.appendChild(right);
   return row;
 }
 function spanel(s){
   const div=el("div",{});
 
-  // ── MCC 警示：餐廳場域最優先顯示 ───────────────────────────
+  // ── 刷卡機歸屬警示：百貨/餐廳 ─────────────────────────────
   const hasMCC = s.excl && s.excl.includes('MCC');
   if(hasMCC){
     const mccBox=el("div",{style:{borderRadius:"12px",padding:"14px 16px",marginBottom:"12px",
       background:"rgba(6,182,212,0.1)",border:"2px solid rgba(6,182,212,0.6)"}});
     mccBox.appendChild(el("div",{style:{fontSize:"13px",fontWeight:"800",color:"#22d3ee",
-      marginBottom:"8px",letterSpacing:"1px"}},"🏷️ MCC 刷卡類別警示（重要）"));
-    mccBox.appendChild(el("div",{style:{fontSize:"13px",color:"#cffafe",lineHeight:"2",whiteSpace:"pre-line"}},
-      "信用卡依 MCC Code 判斷回饋類別，與實體位置無關：\n" +
-      "✅ 獨立刷卡機（餐廳）→ MCC 5812 → 餐廳回饋適用\n" +
-      "❌ 百貨統一刷卡機 → MCC 5311 → 餐廳回饋不適用\n" +
-      "❌ 美食街攤位 → 幾乎都是 MCC 5311 → 餐廳回饋不適用"));
+      marginBottom:"8px"}},"🏷️ 刷卡回饋看的是【誰的刷卡機】，不是【你在哪裡用餐】"));
+    mccBox.appendChild(el("div",{style:{fontSize:"13px",color:"#cffafe",lineHeight:"2.0"}},
+      "✅ 餐廳自己的刷卡機 → 算「餐廳消費」→ 餐廳回饋適用\n" +
+      "❌ 刷百貨公司統一刷卡機 → 算「百貨消費」→ 餐廳回饋不適用\n" +
+      "❌ 美食街攤位（統一收銀）→ 幾乎都算「百貨消費」→ 餐廳回饋不適用\n" +
+      "（消費前無法確認，只能事後從帳單查看；或看發票抬頭是餐廳還是百貨）"));
     mccBox.appendChild(el("div",{style:{marginTop:"10px",padding:"8px 12px",borderRadius:"8px",
       background:"rgba(6,182,212,0.15)",border:"1px solid rgba(6,182,212,0.4)"}},[
-      el("span",{style:{fontSize:"13px",fontWeight:"700",color:"#22d3ee"}},"💡 CUBE 樂饗購 的獨特優勢："),
+      el("span",{style:{fontSize:"13px",fontWeight:"700",color:"#22d3ee"}},"💡 CUBE 樂饗購 為何最穩？"),
       el("div",{style:{fontSize:"13px",color:"#cffafe",marginTop:"4px",lineHeight:"1.8"}},
-        "同時涵蓋 MCC 5812（餐廳）＋ MCC 5311（百貨）\n→ 不管在哪用餐、發票開誰名義，3.3% 均有效，最穩定")
+        "同時涵蓋「餐廳消費」與「百貨消費」兩種類別\n→ 不管刷哪種機器，3.3% 均有效，不用擔心")
     ]));
     div.appendChild(mccBox);
   }
@@ -624,7 +690,7 @@ function spanel(s){
     [el("span",{className:"mode-ok"},"✓ 策略模式"),el("span",{className:"mode-warn"},"↻ 切換"),el("span",{className:"mode-def"},"⚪ 預設")]));
   div.appendChild(el("div",{style:{fontSize:"11px",color:"#4b5563",marginBottom:"10px"}},"右側大數字 = 刷每百元可換哩程數（終點目標）"));
   div.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginBottom:"10px"}},"每百元換哩排行"));
-  [...s.rewards].sort((a,b)=>b.score-a.score).forEach((r,i)=>{const row=rrow(r,i);if(row)div.appendChild(row);});
+  [...s.rewards].sort((a,b)=>getGoalScore(b)-getGoalScore(a)).forEach((r,i)=>{const row=rrow(r,i);if(row)div.appendChild(row);});
   if(s.pay?.length){
     div.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginTop:"14px",marginBottom:"8px"}},"支付注意"));
     s.pay.forEach(p=>div.appendChild(el("div",{style:{display:"flex",gap:"10px",padding:"10px 12px",marginBottom:"5px",background:"rgba(255,255,255,0.02)",borderRadius:"10px",border:"1px solid rgba(255,255,255,0.06)"}},
@@ -1129,6 +1195,24 @@ function render(){
   hdr.appendChild(el("div",{style:{fontSize:"11px",letterSpacing:"4px",color:"#6b7280",textTransform:"uppercase",marginBottom:"4px"}},"Mileage Optimizer v3.8"));
   hdr.appendChild(el("div",{style:{fontSize:"22px",fontWeight:"700"}},"哩程刷卡智慧助理"));
   hdr.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginTop:"3px"}},"每百元換哩精算 · 促銷管理 · AI促銷查詢"));
+  // ── 回饋目標選擇器 ─────────────────────────────────────────
+  const goalBar=el("div",{style:{display:"flex",gap:"6px",marginTop:"10px",flexWrap:"wrap"}});
+  goalBar.appendChild(el("div",{style:{fontSize:"11px",color:"#6b7280",alignSelf:"center",marginRight:"2px",flexShrink:"0"}},"目標："));
+  GOALS.forEach(g=>{
+    const active=ST.goal===g.id;
+    const btn=el("button",{onClick:()=>{
+      ST.goal=g.id;
+      localStorage.setItem("mile_goal",g.id);
+      render();
+    },style:{
+      padding:"4px 11px",borderRadius:"20px",border:`1px solid ${active?"#818cf8":"rgba(255,255,255,0.1)"}`,
+      background:active?"rgba(99,102,241,0.3)":"rgba(255,255,255,0.04)",
+      color:active?"#a5b4fc":"#6b7280",fontSize:"12px",fontWeight:active?"700":"400",
+      cursor:"pointer",whiteSpace:"nowrap"
+    }},`${g.icon} ${g.label}`);
+    goalBar.appendChild(btn);
+  });
+  hdr.appendChild(goalBar);
   wrap.appendChild(hdr);
 
   // Tabs
