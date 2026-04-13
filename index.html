@@ -513,6 +513,15 @@ const SCENARIOS=[
    pay:[{m:"CUBE趣旅行↻切換",n:"切換後9.17哩/百元，此場域最高"},{m:"LINE Pay+Unicard任意選",n:"策略固定：5.25哩/百元"}],
    tip:"CUBE切換趣旅行→9.17哩/百元（最高）；策略固定時LINE Pay→Unicard 3.5%（5.25哩）。"},
   // 海外
+  // ── SUICA / 交通卡儲值 ──────────────────────────────────────
+  {id:"suica",name:"SUICA / ICOCA / PASMO 儲值",icon:"🚆",group:"海外－日本",parent:"overseas",
+   kw:["suica","icoca","pasmo","wowpass","suica儲值","交通卡","西瓜卡","ic卡"],
+   rewards:[R.jx_10,R.hs_10,R.br_sp,R.cb_travel,R.ri_33,R.ci_9,R.uni_lp],
+   excl:"【CUBE 趣旅行 3.3%✅ 官方列出：Apple錢包交通卡(SUICA/PASMO/ICOCA)】\n→ 需切換趣旅行→3%(Lv2)/3.3%(Lv3)→9.17哩/百元\n⚠️ 實測警示：有用戶Apple Pay儲值被認定海外線上→0.03%（有爭議）\n→ 建議先小額測試；若不確定，改用匯豐旅人最穩\n\n【Richart 玩旅刷 3.3%✅ 官方列出：SUICA/ICOCA/PASMO/WOWPASS】\n→ 策略固定玩旅刷→直接3.3%，不需切換✅\n⚠️ 換哩效率差（25.6元/哩），建議折帳單，非首選哩程卡\n\n【哩程卡：SUICA儲值=外幣(日圓)=海外消費】\n→ 匯豐旅人：10元/哩（10哩/百元）✅ 最穩最高\n→ 星宇世界卡：10元/哩（10哩/百元）✅\n→ 長榮無限卡：海外實體10元/哩（10哩/百元）✅\n→ 中信華航：9元/哩（11.1哩/百元）✅\n\n【Unicard ❌ 不在百大；LINE Pay無法用於SUICA儲值→直刷=1%】",
+   warn:"⚠️ CUBE趣旅行SUICA有實測爭議（可能被歸為海外線上0.03%），建議先小額測試",
+   pay:[{m:"哩程卡直刷（日圓=海外）",n:"匯豐旅人/星宇/長榮 10元/哩（10哩/百元）最高"},{m:"Richart玩旅刷（策略固定）",n:"3.3%確定有效，折帳單使用"},{m:"CUBE趣旅行↻切換",n:"官方列出3.3%，實測有爭議，建議先測試"}],
+   tip:"SUICA儲值（日圓=海外）：哩程卡直刷10哩/百元最高；Richart玩旅刷3.3%確定有效；CUBE趣旅行官方列出但實測有爭議"},
+
   {id:"japan",name:"日本 實體消費",icon:"🗾",group:"海外－日本",parent:"overseas",
    kw:["日本","japan","東京","大阪","京都","北海道","沖繩","名古屋","福岡"],
    rewards:[R.cb_travel,R.jx_bday,R.ci_bday,R.br_bday,R.jx_10,R.hs_10,R.ci_9,
