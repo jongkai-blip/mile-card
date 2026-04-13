@@ -1705,21 +1705,27 @@ function renderSearchResultsInto(div){
       });
       ai.appendChild(bb);
     }
-    if(ST.llm.notes)ai.appendChild(el("div",{className:"box",style:{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",color:"#fca5a5",whiteSpace:"pre-wrap"}},`⚠ ${ST.llm.notes}`));
+    // strip <cite index="...">...</cite> tags from any string
+    function stripCite(s){ return (s||"").replace(/<cite[^>]*>([\s\S]*?)<\/cite>/gi,"$1").replace(/<\/?cite[^>]*>/gi,""); }
+
+    if(ST.llm.notes)ai.appendChild(el("div",{className:"box",style:{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",color:"#fca5a5",whiteSpace:"pre-wrap"}},`⚠ ${stripCite(ST.llm.notes)}`));
     const recs = ST.llm.recommendations||[];
     if(recs.length>0){
       ai.appendChild(el("div",{style:{fontSize:"11px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginBottom:"8px",marginTop:"4px"}},`七張卡哩程排行（共${recs.length}張）`));
     }
     recs.forEach((r,i)=>{
-      const isExcluded = (r.reward||"").includes("❌") || (r.reason||"").includes("❌") || (r.reason||"").includes("排除") || (r.reason||"").includes("刷不過");
-      const row=el("div",{style:{background:isExcluded?"rgba(100,100,100,0.05)":"rgba(255,255,255,0.04)",border:`1px solid ${isExcluded?"rgba(100,100,100,0.15)":"rgba(255,255,255,0.08)"}`,borderRadius:"12px",padding:"11px 14px",marginBottom:"7px",opacity:isExcluded?"0.65":"1"}});
+      const reward = stripCite(r.reward||"");
+      const reason = stripCite(r.reason||"");
+      // 只有 reward 本身含 ❌ 或「0哩」才算真正排除，不能抓 reason 內的「排除」字詞
+      const isExcluded = reward.includes("❌") || reward.startsWith("0") || reward.includes("0哩") || reason.includes("❌刷不過") || reason.includes("❌排除");
+      const row=el("div",{style:{background:isExcluded?"rgba(100,100,100,0.05)":"rgba(255,255,255,0.04)",border:`1px solid ${isExcluded?"rgba(100,100,100,0.15)":"rgba(255,255,255,0.08)"}`,borderRadius:"12px",padding:"11px 14px",marginBottom:"7px",opacity:isExcluded?"0.55":"1"}});
       const top=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"4px"}});
       top.appendChild(el("span",{style:{fontSize:i<3?"18px":"14px",minWidth:"22px"}},MEDAL[i]));
-      top.appendChild(el("span",{style:{fontSize:"14px",fontWeight:"700",color:isExcluded?"#6b7280":"#a5b4fc"}},r.card));
-      if(r.payment&&r.payment!=="直刷"&&!isExcluded)top.appendChild(el("span",{style:{fontSize:"11px",color:"#6b7280",background:"rgba(255,255,255,0.05)",padding:"2px 7px",borderRadius:"6px"}},r.payment));
+      top.appendChild(el("span",{style:{fontSize:"14px",fontWeight:"700",color:isExcluded?"#6b7280":"#a5b4fc"}},r.card||""));
+      if(r.payment&&r.payment!=="直刷")top.appendChild(el("span",{style:{fontSize:"11px",color:"#6b7280",background:"rgba(255,255,255,0.05)",padding:"2px 7px",borderRadius:"6px"}},r.payment));
       row.appendChild(top);
-      row.appendChild(el("div",{style:{fontSize:"16px",fontWeight:"800",color:isExcluded?"#6b7280":"#4ade80",marginBottom:"3px"}},r.reward||"—"));
-      row.appendChild(el("div",{style:{fontSize:"12px",color:"#9ca3af",lineHeight:"1.5"}},r.reason));
+      row.appendChild(el("div",{style:{fontSize:"16px",fontWeight:"800",color:isExcluded?"#4b5563":"#4ade80",marginBottom:"3px"}},reward||"—"));
+      row.appendChild(el("div",{style:{fontSize:"12px",color:"#9ca3af",lineHeight:"1.5"}},reason));
       ai.appendChild(row);
     });
     div.appendChild(ai);return;
