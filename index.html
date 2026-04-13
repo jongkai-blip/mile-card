@@ -590,6 +590,11 @@ const GROUPS=[
 
 const getKey=()=>localStorage.getItem("ant_key")||"";
 const setKey=k=>localStorage.setItem("ant_key",k);
+// Rate limiting: 每日AI呼叫上限
+const DAILY_LIMIT=15;
+function getRateData(){try{const d=JSON.parse(localStorage.getItem("ai_rate")||"{}");const today=new Date().toDateString();if(d.date!==today)return{date:today,count:0};return d;}catch{return{date:new Date().toDateString(),count:0};}}
+function checkRate(){const d=getRateData();if(d.count>=DAILY_LIMIT)return false;d.count++;localStorage.setItem("ai_rate",JSON.stringify(d));return true;}
+function getRateLeft(){const d=getRateData();return Math.max(0,DAILY_LIMIT-d.count);}
 const getProxy=()=>localStorage.getItem("ant_proxy")||"";
 const setProxy=p=>localStorage.setItem("ant_proxy",p);
 // Returns the API endpoint — uses proxy if configured, else direct
@@ -628,81 +633,38 @@ function promoCardColor(cardId){
 
 async function queryLLM(q){
   const key=getKey();if(!key)throw new Error("NO_KEY");
-  const sys=`你是台灣信用卡哩程精算師，無論查詢什麼消費場域，都必須對持有的七張卡「逐一列出具體哩程數字」，絕對不可只說「建議使用高回饋信用卡」之類的模糊話語。
+  const sys=`台灣信用卡哩程精算師。任何場域必須對七張卡逐一列出具體哩程數字，禁止模糊建議。
 
-【七張卡的計算公式（固定套用）】
-①星宇世界卡：國內20元/哩(5哩/百元)；海外實體10元/哩(10哩)；生日月海外5元/哩(20哩)
-②長榮無限卡：國內22元/哩(4.55哩/百元)；海外實體10元/哩(10哩)；Expedia等OTA 8元/哩(12.5哩)；⚠️排除保費
-③中信華航鼎尊：國內18元/哩(5.56哩/百元)；海外實體9元/哩(11.1哩)；⚠️排除超商/全聯/電信/稅費
-④CUBE卡：集精選2%→5.56哩/百元；樂饗購/玩數位/趣旅行3.3%→9.17哩/百元（需切換且在正面列表）
-⑤Unicard：百大直刷任意選3.5%→5.25哩/百元；非百大直刷1%→2.78哩；LINE Pay繞道3.5%→5.25哩
-⑥Richart：好饗刷/天天刷/大筆刷/數趣刷3.3%（需切換）→換哩只有3.9哩/百元（差，建議折帳單）；玩旅刷固定策略
-⑦匯豐旅人：國內18元/哩(5.56哩/百元)；海外含線上10元/哩(10哩)；可換16+家航空
+【七張卡公式】
+①星宇：國內5哩/百元(20元/哩)；海外實體10哩(10元/哩)；生日月海外20哩
+②長榮：國內4.55哩(22元)；海外實體10哩(10元)；Expedia訂房12.5哩；⚠️排除保費
+③中信華航：國內5.56哩(18元)；海外實體11.1哩(9元)；⚠️排除超商/全聯/電信/稅費
+④CUBE：集精選2%→5.56哩；樂饗購/玩數位/趣旅行3.3%↻切換→9.17哩（需在正面列表）
+⑤Unicard：百大直刷任意選3.5%→5.25哩；非百大=1%(2.78哩)；LINE Pay繞道=5.25哩
+⑥Richart：各方案3.3%（需切換）→換哩3.9哩/百元（差，建議折帳單）；玩旅刷固定
+⑦匯豐旅人：國內5.56哩(18元)；海外含線上10哩(10元)；可換16+家
 
-【回答強制規則】
-✅ recommendations陣列必須含7個項目，七張卡全部列出
-✅ 每張卡都要有具體數字：「X.XX哩/百元（XX元換1哩）」
-✅ 若某卡有排除/刷不過→寫「❌排除」並說明原因
-✅ 先用web_search確認是否有特殊優惠/NCCC/CUBE方案/Unicard百大狀態
+【強制規則】
+✅ recommendations必須7個，每張卡具體數字「X.XX哩/百元（XX元換1哩）」
+✅ 排除/刷不過→「❌排除：原因」，排除卡才能無哩程數
+✅ 先web_search確認：NCCC/CUBE方案/Unicard百大狀態
 
-【CUBE正面列表摘要(2026)】
-樂饗購：百貨30+家/Uber Eats/foodpanda/全台餐廳/麥當勞/康是美/屈臣氏
-集精選：家樂福/全聯/7-11/全家/中油直營/IKEA/充電樁
-玩數位：蝦皮/momo/PChome/Netflix/Disney+/ChatGPT/Claude等AI工具
-趣旅行：海外實體/20家航空/13家旅行社(含鳳凰)/Klook/Agoda/Booking/高鐵/Uber
+【CUBE通路(2026)】樂饗購：百貨30+家/Uber Eats/foodpanda/全台餐廳/麥當勞/康是美/屈臣氏。集精選：家樂福/全聯/7-11/全家/中油/IKEA。玩數位：蝦皮/momo/PChome/Netflix/ChatGPT/Claude。趣旅行：海外實體/20航空/13旅行社(含鳳凰)/Klook/Agoda/高鐵/Uber
+【Unicard百大餐飲限】Uber Eats/foodpanda/EZTABLE/王品瘋Pay/饗賓/瓦城/乾杯/漢來/鼎王/爭鮮（⚠️星巴克已刪）；國外實體17國含日本/韓國/泰國等
+【Richart好饗刷】全台餐廳/指定飯店/Uber Eats/foodpanda/王品瘋Pay
 
-【Unicard百大餐飲限(10組)】Uber Eats/foodpanda/EZTABLE/王品瘋Pay/饗賓/瓦城/乾杯/漢來/鼎王/爭鮮（⚠️星巴克已刪）
-【Unicard國外實體17國】日本/韓國/泰國/越南/新加坡/馬來西亞/菲律賓/中國/香港/澳門/美國/加拿大/英/法/德/義/澳洲
-【Richart好饗刷】全台餐廳（含高級餐廳/指定飯店）/Uber Eats/foodpanda/王品瘋Pay
-
-【最重要的陷阱，必須用web_search確認】
-1. 是否走NCCC小額支付（常見：八方雲集/麥當勞/50嵐/85度C等→直刷幾乎無回饋）
-2. CUBE哪個方案適用（web_search確認，每季調整）
-3. Unicard百大特店是否在列（web_search確認）
-4. 是否在百貨內（走百貨MCC而非餐廳MCC）
-
-【CUBE 正面列表（2026上半年官方確認完整版）】
-▸趣旅行-旅行社(13家)：ezTravel/雄獅/可樂/東南/五福/燦星/山富/長汎/鳳凰旅行社✅/易飛/理想/永利/三賀
-▸趣旅行-訂房：KKday/Agoda/Klook/Airbnb/Booking.com/Trip.com
-▸趣旅行-航空(20家)：華航/長榮/星宇/虎航/國泰/樂桃/阿聯酋/酷航/捷星/日航/ANA/亞航/聯合/新航/越捷/大韓/達美/土耳其/卡達/法航
-▸樂饗購：百貨(30+家含遠東SOGO/新光三越/台北101等)+Uber Eats/foodpanda+國內餐飲+麥當勞+康是美+屈臣氏
-▸集精選：家樂福/全聯/7-11/全家/台灣中油直營/IKEA/LOPIA台灣/充電樁
-▸玩數位：蝦皮/momo/PChome(不含儲值)/Netflix/Spotify/Disney+/YouTube Premium/Max/ChatGPT/Claude/Gemini/Canva/Cursor/淘寶/Coupang
-→ 查CUBE通路前請先用web_search確認，因每季會調整
-
-【Unicard 百大特店（2025/10/1起更新版確認）】
-▸行動支付：LINE Pay/全支付/街口/悠遊付/全盈+PAY/iPASS MONEY/icash Pay/玉山Wallet
-▸交通加油：台灣中油直營/台灣大車隊/台鐵/高鐵/Uber/Yoxi
-▸百貨(18家)：新光三越/遠東百貨/遠東SOGO/遠東巨城/漢神(不含巨蛋)/微風/台北101/華泰名品城/三井OUTLET/京站/美麗華/誠品生活/秀泰生活/LaLaport/統領廣場/統一時代台北店/昇恆昌/采盟
-▸量販生活：家樂福/屈臣氏/康是美(✅2025/10重新納入)/特力屋/HOLA/UNIQLO/NET/大樹藥局/丁丁藥妝
-▸餐飲(10組)：Uber Eats/foodpanda/EZTABLE/王品瘋Pay/饗賓/瓦城/乾杯/漢來/鼎王/爭鮮（⚠️星巴克已刪除）
-▸旅遊航空：華航/長榮/日航/虎航/樂桃/酷航/Trip.com/Booking.com/Hotels.com/AsiaYo/Expedia/KKday/Klook/雄獅/可樂/東南/Agoda（❌不含鳳凰旅行社）
-▸電商：momo/蝦皮/淘寶/Coupang（❌不含博客來）
-▸精選：Apple直營店/小米台灣/全國電子/燦坤/迪卡儂
-
-【Richart 七大方案完整通路（2026年官方確認）】
-▸玩旅刷(固定策略)：海外消費(含線上)/Uber/Grab/SUICA/ICOCA/PASMO/WOWPASS；航空15家(華航/長榮/星宇/虎航/國泰/華信/立榮/樂桃/阿聯酋/亞航/酷航/捷星/新航/日航/越捷)；訂房(Klook/KKday/Agoda/Booking/Trip/Airbnb/Hotels/Expedia)；旅行社13家(雄獅/易遊/東南/可樂/長汎/五福/喜鴻/易飛/燦星/加利利/鳳凰✅/山富/百威)
-▸天天刷(↻需切換)：超商量販(7-11/全家限台新Pay/家樂福/大買家/唐吉軻德/LOPIA)；交通(台鐵/高鐵/台灣大車隊/Yoxi/Uber/Bolt)；加油充電(中油直營/全國加油等)；★藥妝藥局(寶雅/康是美/屈臣氏/杏一/大樹/丁丁)
-▸大筆刷(↻需切換)：百貨(新光三越/遠東SOGO等16+家)/Outlet/IKEA/特力屋/HOLA/宜得利/UNIQLO/GU/ZARA/NET
-▸好饗刷(↻需切換)：全台餐廳/Uber Eats/foodpanda/王品瘋Pay/指定飯店/指定KTV(錢櫃/好樂迪等)/購票娛樂
-▸數趣刷(↻需切換)：蝦皮/momo/PChome/博客來/Amazon/Yahoo/東森/iHerb/SHEIN；Netflix/Disney+/Steam/PlayStation；ChatGPT/Claude/Notion/Canva/Perplexity
-▸Pay著刷：台新Pay 11萬通路3.8%；LINE Pay 2.3%
-▸假日刷：國內節假日不限通路2%（含LINE Pay/街口）
-
-→ 重要：若不確定某場域在哪個CUBE方案，必須web_search「CUBE 趣旅行/樂饗購/玩數位/集精選 [商家名] 2026」確認
-
-請搜尋「${q} 信用卡 回饋 哩程 2026」確認特殊優惠後，回傳繁體中文JSON（不含代碼塊，recommendations必須7個，七張卡都要有具體哩程數）：
-{"category":"消費類別","nccc":false,"cube_plan":"方案名（如：樂饗購3.3%↻切換）","unicard_in_bai_da":false,
+請先web_search「${q} 信用卡 回饋 哩程 2026」，回傳繁體中文JSON（不含代碼塊）：
+{"category":"類別","nccc":false,"cube_plan":"方案名↻","unicard_in_bai_da":false,
 "recommendations":[
-  {"rank":1,"card":"CUBE卡","payment":"樂饗購↻切換","reward":"9.17哩/百元","reason":"樂饗購3.3%，需切換並確認在通路"},
-  {"rank":2,"card":"星宇世界卡","payment":"直刷","reward":"5哩/百元（20元/哩）","reason":"國內一般消費"},
-  {"rank":3,"card":"匯豐旅人","payment":"直刷","reward":"5.56哩/百元（18元/哩）","reason":"無排除條款最穩"},
-  {"rank":4,"card":"中信華航","payment":"直刷","reward":"5.56哩/百元（18元/哩）","reason":"確認無排除"},
-  {"rank":5,"card":"長榮無限卡","payment":"直刷","reward":"4.55哩/百元（22元/哩）","reason":"國內一般消費"},
-  {"rank":6,"card":"Unicard","payment":"LINE Pay任意選","reward":"5.25哩/百元（3.5%）","reason":"非百大需LINE Pay"},
-  {"rank":7,"card":"Richart","payment":"好饗刷↻切換","reward":"3.9哩/百元（換哩差）","reason":"3.3%但換哩效率差，建議折帳單"}
+{"rank":1,"card":"CUBE卡","payment":"樂饗購↻","reward":"9.17哩/百元","reason":"樂饗購3.3%，需切換"},
+{"rank":2,"card":"星宇世界卡","payment":"直刷","reward":"5哩/百元（20元/哩）","reason":"國內一般消費"},
+{"rank":3,"card":"匯豐旅人","payment":"直刷","reward":"5.56哩/百元（18元/哩）","reason":"無排除條款"},
+{"rank":4,"card":"中信華航","payment":"直刷","reward":"5.56哩/百元（18元/哩）","reason":"確認無排除"},
+{"rank":5,"card":"長榮無限卡","payment":"直刷","reward":"4.55哩/百元（22元/哩）","reason":"國內一般消費"},
+{"rank":6,"card":"Unicard","payment":"LINE Pay","reward":"5.25哩/百元（3.5%）","reason":"非百大需LINE Pay"},
+{"rank":7,"card":"Richart","payment":"好饗刷↻","reward":"3.9哩/百元","reason":"換哩差，建議折帳單"}
 ],
-"notes":"重要但書說明","mall_tip":null}`;
+"notes":"但書說明","mall_tip":null}`;
   const resp=await fetch(apiEndpoint(),{
     method:"POST",
     headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
@@ -1612,6 +1574,12 @@ function friendlyError(e){
 async function doLLM(){
   if(!ST.query.trim()||ST.loading)return;
   if(!getKey()){showKeyModal(doLLM);return;}
+  if(!checkRate()){
+    ST.llm={category:"⚠️ 每日上限",recommendations:[],
+      notes:`今日AI查詢已達上限（${DAILY_LIMIT}次/天），明日自動重置。\n剩餘：0次\n\n如需解除限制，請至 Anthropic Console → Settings → Limits 設定月費上限保護用量。`,
+      mall_tip:null};
+    render();return;
+  }
   ST.loading=true;ST.llm=null;render();
   try{ST.llm=await queryLLM(ST.query);}
   catch(e){
@@ -1674,7 +1642,8 @@ function renderSearchResultsInto(div){
     const nr=el("div",{style:{textAlign:"center",padding:"32px 0",color:"#6b7280"}});
     nr.appendChild(el("div",{style:{fontSize:"36px",marginBottom:"10px"}},"🤖"));
     nr.appendChild(el("div",{style:{fontSize:"15px",marginBottom:"14px"}},`找不到「${ST.query}」的內建資料`));
-    nr.appendChild(el("button",{onClick:doLLM,style:{background:"rgba(99,102,241,0.85)",border:"none",borderRadius:"12px",padding:"12px 24px",fontSize:"14px",fontWeight:"700",color:"white",marginBottom:"8px",display:"block",width:"100%"}},"🤖 AI 分析刷卡策略"));
+    const rLeft=getRateLeft();
+    nr.appendChild(el("button",{onClick:doLLM,style:{background:rLeft>0?"rgba(99,102,241,0.85)":"rgba(100,100,100,0.4)",border:"none",borderRadius:"12px",padding:"12px 24px",fontSize:"14px",fontWeight:"700",color:"white",marginBottom:"8px",display:"block",width:"100%"}},`🤖 AI 分析刷卡策略（今日剩 ${rLeft}/${DAILY_LIMIT} 次）`));
     nr.appendChild(el("button",{onClick:doLiveSearch,style:{background:"rgba(74,222,128,0.2)",border:"1px solid rgba(74,222,128,0.4)",borderRadius:"12px",padding:"12px 24px",fontSize:"14px",fontWeight:"700",color:"#4ade80",display:"block",width:"100%"}},"🤖 AI 查詢促銷優惠"));
     div.appendChild(nr);return;
   }
