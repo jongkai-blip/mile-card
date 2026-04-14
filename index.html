@@ -668,9 +668,10 @@ async function queryLLM(q){
   const resp=await fetch(apiEndpoint(),{
     method:"POST",
     headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01"},
-    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1500,system:sys,
-      tools:[{type:"web_search_20250305",name:"web_search"}],
-      messages:[{role:"user",content:`請搜尋並分析「${q}」的刷卡陷阱與最佳策略`}]})
+    body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:700,system:sys,
+      // ⚠️ web_search 已移除：每次搜尋累積 30,000-60,000 tokens，費用 $0.15-0.20/次
+      // system prompt 已內建所有卡片資料，Haiku 直接回答即可
+      messages:[{role:"user",content:`分析「${q}」的刷卡策略，七張卡逐一列出哩程數，回傳JSON`}]})
   });
   if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||resp.status);}
   const d=await resp.json();
@@ -695,28 +696,23 @@ async function queryLLM(q){
   }catch{return{category:"AI分析（含即時搜尋）",recommendations:[],notes:t.slice(0,500),mall_tip:null};}
 }
 
-// ─── LIVE PROMO SEARCH (Anthropic API + web_search) ──────────
+// ─── LIVE PROMO SEARCH (用訓練資料，不搜尋網路) ──────────────
 async function liveSearchPromos(merchant){
-  const key=getKey();if(!key)throw new Error("NO_KEY");
-  const cards="玉山星宇世界卡、國泰世華長榮無限卡、中信華航鼎尊無限卡、國泰CUBE卡、玉山Unicard、台新Richart卡、匯豐旅人無限卡";
-  const sys=`你是台灣信用卡促銷搜尋助理，根據你的訓練資料回答。針對指定消費場域「${merchant}」：
-1. 若該場域有信用卡使用限制（如Costco好市多只接受富邦Costco聯名卡），請在summary最前面明確說明此限制
-2. 僅針對以下七張卡：${cards}，說明哪幾張真正有特別優惠（若某張卡無法在該場域使用，直接跳過勿列出）
-3. 說明該場域官方是否有聯名卡或長期刷卡優惠合作
-重要：若場域有獨家聯名卡限制（如Costco），promos陣列只需回傳該限制說明，不要虛構其他卡的優惠
-注意：若不確定某筆促銷是否仍有效，請明確說明「需自行確認是否仍有效」
-以繁體中文JSON回傳（不含代碼塊）：
-{"promos":[{"card":"卡名或官方","title":"優惠標題","detail":"優惠細節","end":null,"source":"建議確認來源"}],"summary":"整體建議","merchant_promo":"官方合作說明或null"}`;
+  const cards="星宇世界卡、長榮無限卡、中信華航、CUBE卡、Unicard、Richart卡、匯豐旅人";
+  const sys=`台灣信用卡促銷助理。針對「${merchant}」，用訓練資料回答七張卡優惠：${cards}。
+若有特殊限制（如Costco只收富邦卡）請優先說明。不確定的促銷要標注「請至官網確認」。
+回傳繁體中文JSON（不含代碼塊）：
+{"promos":[{"card":"卡名","title":"優惠標題","detail":"細節","source":"建議確認來源"}],"summary":"整體建議","merchant_promo":"官方合作或null"}`;
   const resp=await fetch(apiEndpoint(),{
     method:"POST",
     headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01"},
-    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1200,
+    body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:600,
       system:sys,
-      messages:[{role:"user",content:`「${merchant}」這個消費場域，哪些信用卡有特別優惠或促銷？`}]})
+      messages:[{role:"user",content:`「${merchant}」七張卡有哪些特別優惠？`}]})
   });
   if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||resp.status);}
   const d=await resp.json();
-  const text=d.content?.[0]?.text||"";
+  const text=d.content?.filter(b=>b.type==="text").map(b=>b.text).join("")||"";
   function extractJ(t){const s=t.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();try{return JSON.parse(s);}catch{}const m=t.match(/\{[\s\S]*\}/);if(m){try{return JSON.parse(m[0]);}catch{}}return null;}
   try{const p=extractJ(text);return p||{promos:[],summary:text.slice(0,400),merchant_promo:null};}
   catch{return{promos:[],summary:text.slice(0,400),merchant_promo:null};}
@@ -783,8 +779,8 @@ async function runMonthlyCheck(){
         method:"POST",
         headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-20250514", max_tokens:1200,
-          tools:[{type:"web_search_20250305",name:"web_search"}],
+          model:"claude-haiku-4-5-20251001", max_tokens:500,
+          // 月度稽核不需要 web_search，用訓練資料即可
           messages:[{role:"user",content:q.prompt}]
         })
       });
@@ -795,7 +791,7 @@ async function runMonthlyCheck(){
     } catch(e){
       results[q.id] = {summary:`查詢失敗：${e.message}`, error:true};
     }
-    await new Promise(r=>setTimeout(r,1000));
+    await new Promise(r=>setTimeout(r,500));
   }
 
   const checkResult = {
