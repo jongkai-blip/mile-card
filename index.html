@@ -595,6 +595,67 @@ const DAILY_LIMIT=15;
 function getRateData(){try{const d=JSON.parse(localStorage.getItem("ai_rate")||"{}");const today=new Date().toDateString();if(d.date!==today)return{date:today,count:0};return d;}catch{return{date:new Date().toDateString(),count:0};}}
 function checkRate(){const d=getRateData();if(d.count>=DAILY_LIMIT)return false;d.count++;localStorage.setItem("ai_rate",JSON.stringify(d));return true;}
 function getRateLeft(){const d=getRateData();return Math.max(0,DAILY_LIMIT-d.count);}
+
+// ─── 學習資料庫（AI搜尋結果自動存入，30天有效）─────────────────
+const LEARNED_DB_KEY = "mile_learned_v1";
+const LEARNED_EXPIRY_DAYS = 30;
+
+function learnedDB(){
+  try{ return JSON.parse(localStorage.getItem(LEARNED_DB_KEY)||"{}"); }
+  catch{ return {}; }
+}
+function saveLearnedDB(db){ localStorage.setItem(LEARNED_DB_KEY, JSON.stringify(db)); }
+
+// 正規化商家名稱（大小寫/空格不敏感）
+function normalizeKey(q){ return q.trim().toLowerCase().replace(/\s+/g,""); }
+
+function getLearnedResult(q){
+  const db = learnedDB();
+  const key = normalizeKey(q);
+  const entry = db[key];
+  if(!entry) return null;
+  // 檢查是否過期
+  const ageDays = (Date.now() - entry.savedAt) / (1000*60*60*24);
+  if(ageDays > LEARNED_EXPIRY_DAYS) { deleteLearnedResult(q); return null; }
+  return entry;
+}
+
+function saveLearnedResult(q, result){
+  if(!result || !result.recommendations || result.recommendations.length === 0) return;
+  const db = learnedDB();
+  const key = normalizeKey(q);
+  db[key] = {
+    query: q.trim(),
+    savedAt: Date.now(),
+    source: "web_search",
+    ...result,
+    // 標記為已學習資料
+    _learned: true,
+    _learnedDate: new Date().toLocaleDateString("zh-TW"),
+  };
+  saveLearnedDB(db);
+}
+
+function deleteLearnedResult(q){
+  const db = learnedDB();
+  delete db[normalizeKey(q)];
+  saveLearnedDB(db);
+}
+
+function getAllLearned(){
+  const db = learnedDB();
+  return Object.values(db)
+    .filter(e => (Date.now()-e.savedAt)/(1000*60*60*24) <= LEARNED_EXPIRY_DAYS)
+    .sort((a,b) => b.savedAt - a.savedAt);
+}
+
+function learnedAgeText(savedAt){
+  const mins = Math.floor((Date.now()-savedAt)/60000);
+  if(mins<60) return `${mins}分鐘前`;
+  const hrs = Math.floor(mins/60);
+  if(hrs<24) return `${hrs}小時前`;
+  return `${Math.floor(hrs/24)}天前`;
+}
 const getProxy=()=>localStorage.getItem("ant_proxy")||"";
 const setProxy=p=>localStorage.setItem("ant_proxy",p);
 // Worker proxy URL（key 存在 Worker secret，前端完全看不到）
@@ -1507,14 +1568,34 @@ function friendlyError(e){
 
 async function doLLM(){
   if(!ST.query.trim()||ST.loading)return;
+
+  // ① 先查學習資料庫
+  const learned = getLearnedResult(ST.query);
+  if(learned){
+    ST.llm = learned;
+    ST.loading=false;
+    render();
+    return;  // ✅ 直接用快取，不消耗 API
+  }
+
+  // ② 未命中：檢查每日上限
   if(!checkRate()){
     ST.llm={category:"⚠️ 每日上限",recommendations:[],
-      notes:`今日AI查詢已達上限（${DAILY_LIMIT}次/天），明日自動重置。\n剩餘：0次\n\n如需解除限制，請至 Anthropic Console → Settings → Limits 設定月費上限保護用量。`,
+      notes:`今日AI查詢已達上限（${DAILY_LIMIT}次/天），明日自動重置。`,
       mall_tip:null};
     render();return;
   }
+
+  // ③ 呼叫 AI 搜尋
   ST.loading=true;ST.llm=null;render();
-  try{ST.llm=await queryLLM(ST.query);}
+  try{
+    const result = await queryLLM(ST.query);
+    ST.llm = result;
+    // ④ 搜尋成功 → 存入學習資料庫
+    if(result && result.recommendations && result.recommendations.length > 0){
+      saveLearnedResult(ST.query, result);
+    }
+  }
   catch(e){
     if(e.message==="NO_KEY"){showKeyModal(doLLM);ST.loading=false;render();return;}
     ST.llm={category:"錯誤",recommendations:[],notes:friendlyError(e),mall_tip:null};
@@ -1589,8 +1670,29 @@ function renderSearchResultsInto(div){
     const ai=el("div",{});
     const ah=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px"}});
     ah.appendChild(document.createTextNode("🤖"));
-    ah.appendChild(el("span",{style:{fontSize:"15px",color:"#818cf8",fontWeight:"600"}},`AI分析（即時搜尋）：${ST.llm.category}`));
-    ah.appendChild(el("button",{onClick:()=>{ST.llm=null;render();},style:{marginLeft:"auto",background:"none",border:"none",color:"#6b7280",fontSize:"22px"}},"×"));
+    const isFromCache = ST.llm._learned === true;
+    const cacheAge = isFromCache ? learnedAgeText(ST.llm.savedAt) : null;
+
+    ah.appendChild(el("span",{style:{fontSize:"15px",color: isFromCache?"#4ade80":"#818cf8",fontWeight:"600"}},
+      isFromCache
+        ? `📚 學習資料庫：${ST.llm.category}`
+        : `🔍 即時搜尋：${ST.llm.category}`));
+    if(isFromCache){
+      ah.appendChild(el("span",{style:{fontSize:"11px",color:"#4b5563",marginLeft:"8px"}},[document.createTextNode(`${cacheAge}儲存`)]));
+    }
+    // 重新搜尋按鈕（快取時顯示，可強制刷新）
+    const refreshBtn=el("button",{
+      onClick:()=>{
+        if(isFromCache) deleteLearnedResult(ST.query);
+        ST.llm=null; doLLM();
+      },
+      style:{marginLeft:"auto",background:"none",border:"1px solid rgba(255,255,255,0.1)",
+        borderRadius:"8px",color:"#6b7280",fontSize:"11px",padding:"3px 8px",cursor:"pointer"}
+    }, isFromCache ? "🔄 重新搜尋" : "×");
+    ah.appendChild(refreshBtn);
+    if(!isFromCache){
+      ah.appendChild(el("button",{onClick:()=>{ST.llm=null;render();},style:{marginLeft:"6px",background:"none",border:"none",color:"#6b7280",fontSize:"22px"}},"×"));
+    }
     ai.appendChild(ah);
     // ── 陷阱徽章 ──
     const badges=[];
@@ -1781,6 +1883,57 @@ function render(){
       bb.appendChild(el("span",{style:{fontSize:"17px",fontWeight:"700"}},ST.sel.name));
       cnt.appendChild(bb);cnt.appendChild(spanel(ST.sel));
     } else {
+      // ── 📚 學習資料庫（AI搜尋後自動儲存）───────────────────
+      const learned = getAllLearned();
+      if(learned.length > 0){
+        const lhdr=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"8px"}});
+        lhdr.appendChild(el("span",{style:{fontSize:"14px",fontWeight:"700",color:"#4ade80"}},"📚 學習資料庫"));
+        lhdr.appendChild(el("span",{style:{fontSize:"12px",color:"#4b5563"}},[document.createTextNode(`${learned.length}筆・AI搜尋後自動儲存・30天有效`)]));
+        const clearBtn=el("button",{
+          onClick:()=>{localStorage.removeItem(LEARNED_DB_KEY);render();},
+          style:{marginLeft:"auto",fontSize:"11px",color:"#6b7280",background:"none",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"6px",padding:"2px 7px",cursor:"pointer"}
+        },"全部清除");
+        lhdr.appendChild(clearBtn);
+        cnt.appendChild(lhdr);
+        const lgrid=el("div",{style:{marginBottom:"14px"}});
+        learned.forEach(entry=>{
+          const row=el("div",{style:{display:"flex",alignItems:"center",background:"rgba(74,222,128,0.04)",border:"1px solid rgba(74,222,128,0.15)",borderRadius:"10px",padding:"9px 12px",marginBottom:"5px",gap:"10px"}});
+          // Click to load cached result
+          const nameBtn=el("button",{
+            onClick:()=>{
+              ST.query=entry.query;
+              ST.llm=entry;
+              ST.tab="search";
+              render();
+            },
+            style:{flex:"1",textAlign:"left",background:"none",border:"none",cursor:"pointer",padding:"0"}
+          });
+          nameBtn.appendChild(el("div",{style:{fontSize:"13px",fontWeight:"700",color:"#d1d5db"}},entry.query));
+          nameBtn.appendChild(el("div",{style:{fontSize:"11px",color:"#4b5563"}},[document.createTextNode(`${entry.category||""}・${learnedAgeText(entry.savedAt)}儲存`)]));
+          row.appendChild(nameBtn);
+          // Delete this entry
+          const delBtn=el("button",{
+            onClick:(e)=>{e.stopPropagation();deleteLearnedResult(entry.query);render();},
+            style:{fontSize:"16px",color:"#4b5563",background:"none",border:"none",cursor:"pointer",flexShrink:"0"}
+          },"🗑");
+          // Force refresh
+          const refBtn=el("button",{
+            onClick:(e)=>{
+              e.stopPropagation();
+              deleteLearnedResult(entry.query);
+              ST.query=entry.query;
+              ST.tab="search";
+              doLLM();
+              render();
+            },
+            style:{fontSize:"16px",color:"#4b5563",background:"none",border:"none",cursor:"pointer",flexShrink:"0"}
+          },"🔄");
+          row.appendChild(refBtn);
+          row.appendChild(delBtn);
+          lgrid.appendChild(row);
+        });
+        cnt.appendChild(lgrid);
+      }
       GROUPS.forEach(group=>{
         const gd=el("div",{style:{marginBottom:"9px"}});
         const gb=el("button",{onClick:()=>{ST.expG=ST.expG===group.id?null:group.id;render();},
