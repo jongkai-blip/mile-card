@@ -1624,6 +1624,7 @@ function renderSearchResultsInto(div){
        el("div",{style:{fontSize:"14px"}},"AI 查詢促銷資料中…")]));
     return;
   }
+  // ── ST.sel 已選取：顯示 spanel（目標切換即時更新）──────────
   if(ST.sel){
     const bb=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px"}});
     bb.appendChild(el("button",{onClick:()=>{ST.sel=null;render();},style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:"10px",padding:"6px 14px",fontSize:"14px",color:"#9ca3af"}},"← 返回"));
@@ -1634,16 +1635,39 @@ function renderSearchResultsInto(div){
     div.appendChild(spanel(ST.sel));
     return;
   }
+  // ── 只有1筆結果：直接自動展開 spanel ──────────────────────
+  if(ST.results.length===1&&!ST.llm){
+    ST.sel=ST.results[0];   // 自動選取，下次 render 也有效
+    const pb=promosBanner(ST.sel.name);if(pb)div.appendChild(pb);
+    div.appendChild(spanel(ST.sel));
+    return;
+  }
+  // ── 多筆結果：列表顯示，每筆附當前目標最佳卡片 ────────────
   if(ST.results.length&&!ST.llm){
     const pb=promosBanner(ST.query);if(pb)div.appendChild(pb);
-    div.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginBottom:"10px"}},`找到 ${ST.results.length} 個場域`));
+    div.appendChild(el("div",{style:{fontSize:"12px",letterSpacing:"2px",color:"#4b5563",textTransform:"uppercase",marginBottom:"10px"}},`找到 ${ST.results.length} 個場域（目標：${goalLabel().label}）`));
     ST.results.forEach(s=>{
-      const btn=el("button",{onClick:()=>{ST.sel=s;render();},style:{width:"100%",textAlign:"left",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"13px 14px",display:"flex",alignItems:"center",gap:"12px",marginBottom:"7px"}});
+      // 計算本場域在當前目標下最佳卡片（切換目標會即時更新）
+      const bestR=[...s.rewards].sort((a,b)=>getGoalScore(b)-getGoalScore(a))
+        .find(r=>CARDS[r.id]&&r.score>0&&r.bypassOnly!==true);
+      const bc=bestR?CARDS[bestR.id]:null;
+      const btn=el("button",{onClick:()=>{ST.sel=s;render();},
+        style:{width:"100%",textAlign:"left",background:"rgba(255,255,255,0.04)",
+          border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",
+          padding:"13px 14px",display:"flex",alignItems:"center",gap:"12px",marginBottom:"7px"}});
       btn.appendChild(el("span",{style:{fontSize:"24px"}},s.icon));
       const t=el("div",{style:{flex:"1"}});
       t.appendChild(el("div",{style:{fontSize:"15px",color:"#e8eaf0",fontWeight:"600"}},s.name));
       t.appendChild(el("div",{style:{fontSize:"13px",color:"#6b7280",marginTop:"2px"}},s.group));
       btn.appendChild(t);
+      // 右側：當前目標最佳卡 + 哩程數
+      if(bc&&bestR){
+        const best=el("div",{style:{textAlign:"right",flexShrink:"0"}});
+        best.appendChild(el("div",{style:{fontSize:"11px",fontWeight:"700",color:bc.color}},bc.short));
+        if(bestR.m100>0)best.appendChild(el("div",{style:{fontSize:"13px",color:"#4ade80",fontWeight:"800"}},
+          `${bestR.m100.toFixed(bestR.m100===Math.floor(bestR.m100)?0:2)}哩`));
+        btn.appendChild(best);
+      }
       const pcount=activePromos(s.name).length;
       if(pcount)btn.appendChild(el("span",{style:{fontSize:"11px",background:"rgba(245,158,11,0.3)",color:"#f59e0b",padding:"2px 7px",borderRadius:"8px",flexShrink:"0"}},"📣 "+pcount));
       else if(s.warn)btn.appendChild(el("span",{style:{fontSize:"16px"}},"⚠️"));
