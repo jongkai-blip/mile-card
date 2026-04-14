@@ -597,11 +597,11 @@ function checkRate(){const d=getRateData();if(d.count>=DAILY_LIMIT)return false;
 function getRateLeft(){const d=getRateData();return Math.max(0,DAILY_LIMIT-d.count);}
 const getProxy=()=>localStorage.getItem("ant_proxy")||"";
 const setProxy=p=>localStorage.setItem("ant_proxy",p);
-// Returns the API endpoint — uses proxy if configured, else direct
-function apiEndpoint(){
-  const p=getProxy().trim();
-  return p||"https://api.anthropic.com/v1/messages";
-}
+// Worker proxy URL（key 存在 Worker secret，前端完全看不到）
+const WORKER_URL = "https://mile-proxy.jongkai-11c.workers.dev/v1/messages";
+function apiEndpoint(){ return WORKER_URL; }
+// 舊版相容（key 輸入介面保留，但 Worker 模式下 key 由 Worker 管理）
+function needsKey(){ return false; } // Worker 模式下前端不需要 key
 
 // ─── PROMO SYSTEM ────────────────────────────────────────────
 const PROMO_KEY="mile_promos";
@@ -667,7 +667,7 @@ async function queryLLM(q){
 "notes":"但書說明","mall_tip":null}`;
   const resp=await fetch(apiEndpoint(),{
     method:"POST",
-    headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
+    headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01"},
     body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1500,system:sys,
       tools:[{type:"web_search_20250305",name:"web_search"}],
       messages:[{role:"user",content:`請搜尋並分析「${q}」的刷卡陷阱與最佳策略`}]})
@@ -709,7 +709,7 @@ async function liveSearchPromos(merchant){
 {"promos":[{"card":"卡名或官方","title":"優惠標題","detail":"優惠細節","end":null,"source":"建議確認來源"}],"summary":"整體建議","merchant_promo":"官方合作說明或null"}`;
   const resp=await fetch(apiEndpoint(),{
     method:"POST",
-    headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
+    headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01"},
     body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1200,
       system:sys,
       messages:[{role:"user",content:`「${merchant}」這個消費場域，哪些信用卡有特別優惠或促銷？`}]})
@@ -781,7 +781,7 @@ async function runMonthlyCheck(){
     try{
       const resp = await fetch(apiEndpoint(),{
         method:"POST",
-        headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
+        headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01"},
         body: JSON.stringify({
           model:"claude-sonnet-4-20250514", max_tokens:1200,
           tools:[{type:"web_search_20250305",name:"web_search"}],
@@ -1475,90 +1475,38 @@ function liveResultsPanel(data){
 }
 
 // ─── API 連線測試 ─────────────────────────────────────────────
-async function testApiConnection(key,proxyUrl){
-  const endpoint=(proxyUrl||"").trim()||"https://api.anthropic.com/v1/messages";
+async function testApiConnection(){
   try{
-    const resp=await fetch(endpoint,{
-      method:"POST",
-      headers:{"Content-Type":"application/json","x-api-key":key.trim(),"anthropic-version":"2023-06-01"},
-      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:10,
-        messages:[{role:"user",content:"Hi"}]})
-    });
-    if(resp.status===401)return{ok:false,msg:"❌ API Key 無效或已過期，請重新申請"};
-    if(resp.status===403)return{ok:false,msg:"❌ API Key 無存取權限"};
-    if(resp.ok)return{ok:true,msg:`✅ 連線成功！${endpoint.includes("anthropic.com")?"（直連）":"（經代理）"}`};
-    return{ok:false,msg:`❌ HTTP ${resp.status} 錯誤`};
-  }catch(e){
-    if(e instanceof TypeError)
-      return{ok:false,msg:"❌ 直連失敗（CORS/防火牆）\n→ 請填入 Cloudflare Worker 代理網址後再測試"};
-    return{ok:false,msg:`❌ 連線錯誤：${e.message}`};
-  }
+    const r=await fetch(WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:10,messages:[{role:"user",content:"hi"}]})});
+    return r.ok||r.status===200;
+  }catch{return false;}
 }
 
 function showKeyModal(cb){
-  const mc=document.getElementById("mc");mc.innerHTML="";
-  const bg=el("div",{className:"modal-bg",onClick:e=>{if(e.target===bg)mc.innerHTML="";}});
-  const box=el("div",{className:"modal"});
-  box.appendChild(el("div",{style:{fontSize:"19px",fontWeight:"700",marginBottom:"10px"}},"🔑 API 設定"));
-
-  const cur=getKey();
-  if(cur){
-    const preview=cur.length>12?cur.slice(0,8)+"…"+cur.slice(-4):"（已設定）";
-    box.appendChild(el("div",{style:{fontSize:"12px",color:"#4ade80",marginBottom:"8px",
-      background:"rgba(74,222,128,0.1)",borderRadius:"8px",padding:"6px 10px"}},`目前 Key：${preview}`));
-  }
-
-  // API Key
-  box.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginBottom:"4px"}},"Anthropic API Key"));
-  const keyInp=el("input",{type:"text",placeholder:"sk-ant-api03-...",
-    style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
-      borderRadius:"10px",padding:"11px 14px",fontSize:"14px",color:"#e8eaf0",outline:"none",
-      marginBottom:"12px",fontFamily:"monospace"},value:cur});
-  keyInp.setAttribute("autocomplete","off");keyInp.setAttribute("autocorrect","off");keyInp.setAttribute("spellcheck","false");
-  box.appendChild(keyInp);
-
-  // Proxy URL
-  const curProxy=getProxy();
-  box.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginBottom:"4px"}},"代理網址（醫院/公司網路防火牆時需填）"));
-  const proxyInp=el("input",{type:"text",placeholder:"https://mile-proxy.你的帳號.workers.dev",
-    style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",
-      borderRadius:"10px",padding:"11px 14px",fontSize:"13px",color:"#e8eaf0",outline:"none",marginBottom:"4px"},
-    value:curProxy});
-  proxyInp.setAttribute("autocomplete","off");proxyInp.setAttribute("autocorrect","off");
-  box.appendChild(proxyInp);
-  box.appendChild(el("div",{style:{fontSize:"11px",color:"#4b5563",marginBottom:"12px",lineHeight:"1.6"}},
-    "若直連失敗：cloudflare.com/workers 免費建立代理（見下方步驟）"));
-
-  const status=el("div",{style:{fontSize:"13px",marginBottom:"10px",minHeight:"20px",lineHeight:"1.7",
-    whiteSpace:"pre-line",color:"#9ca3af"}});
-  box.appendChild(status);
-
-  const testBtn=el("button",{onClick:async()=>{
-    const k=keyInp.value.trim();const p=proxyInp.value.trim();
-    if(!k){status.style.color="#f87171";status.textContent="請先輸入 API Key";return;}
-    if(!k.startsWith("sk-ant")){status.style.color="#f59e0b";status.textContent="⚠ Key 應以 sk-ant 開頭";return;}
-    testBtn.disabled=true;testBtn.textContent="⏳ 測試中…";status.textContent="";
-    const r=await testApiConnection(k,p);
-    testBtn.disabled=false;testBtn.textContent="🔌 測試連線";
-    status.style.color=r.ok?"#4ade80":"#f87171";status.textContent=r.msg;
-  },style:{width:"100%",padding:"10px",marginBottom:"8px",background:"rgba(255,255,255,0.06)",
-    border:"1px solid rgba(255,255,255,0.12)",borderRadius:"10px",fontSize:"13px",color:"#9ca3af"}},"🔌 測試連線");
-  box.appendChild(testBtn);
-
-  const btnRow=el("div",{style:{display:"flex",gap:"8px"}});
-  btnRow.appendChild(el("button",{onClick:()=>mc.innerHTML="",style:{flex:"1",padding:"12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",fontSize:"14px",color:"#9ca3af"}},"取消"));
-  btnRow.appendChild(el("button",{onClick:()=>{
-    const k=keyInp.value.trim();const p=proxyInp.value.trim();
-    if(!k){status.style.color="#f87171";status.textContent="請輸入 API Key";return;}
-    if(!k.startsWith("sk-ant")){status.style.color="#f59e0b";status.textContent="⚠ Key 格式不對";return;}
-    setKey(k);setProxy(p);mc.innerHTML="";if(cb)cb();
-  },style:{flex:"2",padding:"12px",background:"rgba(99,102,241,0.85)",border:"none",borderRadius:"10px",fontSize:"14px",fontWeight:"700",color:"white"}},"儲存"));
-  box.appendChild(btnRow);
-  if(cur)box.appendChild(el("button",{onClick:()=>{setKey("");setProxy("");mc.innerHTML="";render();},
-    style:{width:"100%",marginTop:"10px",padding:"8px",background:"transparent",border:"none",fontSize:"13px",color:"#6b7280"}},"清除所有設定"));
-  bg.appendChild(box);mc.appendChild(bg);
+  // Worker mode: no key needed, just show status
+  if(cb) cb();
+  return;
 }
-
+function showWorkerStatus(){
+  const mc=document.getElementById("modal-container");
+  if(!mc)return;
+  mc.innerHTML="";
+  const ov=el("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px"},onClick:()=>{mc.innerHTML="";render();}});
+  const box=el("div",{style:{background:"#111827",borderRadius:"16px",padding:"24px",width:"100%",maxWidth:"380px",border:"1px solid rgba(255,255,255,0.1)"}});
+  box.appendChild(el("div",{style:{fontSize:"18px",fontWeight:"800",marginBottom:"16px"}},"🔐 Worker 代理狀態"));
+  box.appendChild(el("div",{style:{background:"rgba(74,222,128,0.1)",border:"1px solid rgba(74,222,128,0.3)",borderRadius:"10px",padding:"12px",marginBottom:"12px",fontSize:"13px",color:"#4ade80"}},
+    "✅ API Key 已安全存放於 Cloudflare Worker\n前端完全看不到 key，外人無法盜用"));
+  box.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",lineHeight:"1.8"}},
+    `Worker URL：${WORKER_URL}\n每IP每日上限：${DAILY_LIMIT_PER_IP || 20}次\n每日個人上限：${DAILY_LIMIT}次`));
+  const rateInfo=getRateData();
+  box.appendChild(el("div",{style:{marginTop:"12px",fontSize:"13px",color:"#9ca3af"}},
+    `今日你已使用：${rateInfo.count||0}/${DAILY_LIMIT} 次`));
+  const closeBtn=el("button",{onClick:()=>{mc.innerHTML="";},style:{width:"100%",marginTop:"16px",padding:"10px",background:"rgba(99,102,241,0.3)",border:"1px solid rgba(99,102,241,0.5)",borderRadius:"10px",color:"#a5b4fc",fontWeight:"700",cursor:"pointer"}},"關閉");
+  box.appendChild(closeBtn);
+  ov.appendChild(box);
+  mc.appendChild(ov);
+}
 // ─── 精確錯誤識別 ─────────────────────────────────────────────
 // ─── 精確錯誤識別 ─────────────────────────────────────────────
 function friendlyError(e){
@@ -1573,7 +1521,6 @@ function friendlyError(e){
 
 async function doLLM(){
   if(!ST.query.trim()||ST.loading)return;
-  if(!getKey()){showKeyModal(doLLM);return;}
   if(!checkRate()){
     ST.llm={category:"⚠️ 每日上限",recommendations:[],
       notes:`今日AI查詢已達上限（${DAILY_LIMIT}次/天），明日自動重置。\n剩餘：0次\n\n如需解除限制，請至 Anthropic Console → Settings → Limits 設定月費上限保護用量。`,
@@ -1591,7 +1538,7 @@ async function doLLM(){
 
 async function doLiveSearch(){
   if(!ST.query.trim()||ST.liveLoading)return;
-  if(!getKey()){showKeyModal(doLiveSearch);return;}
+  // Worker mode: no key needed
   ST.liveLoading=true;ST.live=null;render();
   try{ST.live=await liveSearchPromos(ST.query);}
   catch(e){
@@ -1827,7 +1774,7 @@ function render(){
     cnt.appendChild(liveRow);
 
     if(!getKey())cnt.appendChild(el("div",{style:{fontSize:"12px",color:"#6b7280",marginBottom:"10px"}},
-      ["🔑 AI功能需設定 API Key ",el("button",{onClick:()=>showKeyModal(doLLM),style:{fontSize:"12px",color:"#818cf8",background:"none",border:"none",textDecoration:"underline"}},"設定")]));
+      "🔑 連線中..."));
 
     // ── 每月稽核橫幅（搜尋為空時顯示）──
     if(!ST.query.trim()){
