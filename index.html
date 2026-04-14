@@ -633,58 +633,48 @@ function promoCardColor(cardId){
 
 async function queryLLM(q){
   const key=getKey();if(!key)throw new Error("NO_KEY");
-  const sys=`台灣信用卡哩程精算師。任何場域必須對七張卡逐一列出具體哩程數字，禁止模糊建議。
+  const sys=`台灣信用卡哩程精算師。搜尋「${q}」相關最新信用卡優惠後，對七張卡逐一列出具體哩程數字。禁止模糊建議。
 
 【七張卡公式】
-①星宇：國內5哩/百元(20元/哩)；海外實體10哩(10元/哩)；生日月海外20哩
-②長榮：國內4.55哩(22元)；海外實體10哩(10元)；Expedia訂房12.5哩；⚠️排除保費
+①星宇：國內5哩/百元(20元/哩)；海外實體10哩；生日月海外20哩
+②長榮：國內4.55哩(22元)；海外實體10哩；Expedia訂房12.5哩；⚠️排除保費
 ③中信華航：國內5.56哩(18元)；海外實體11.1哩(9元)；⚠️排除超商/全聯/電信/稅費
-④CUBE：集精選2%→5.56哩；樂饗購/玩數位/趣旅行3.3%↻切換→9.17哩（需在正面列表）
-⑤Unicard：百大直刷任意選3.5%→5.25哩；非百大=1%(2.78哩)；LINE Pay繞道=5.25哩
-⑥Richart：各方案3.3%（需切換）→換哩3.9哩/百元（差，建議折帳單）；玩旅刷固定
-⑦匯豐旅人：國內5.56哩(18元)；海外含線上10哩(10元)；可換16+家
+④CUBE：集精選2%→5.56哩；樂饗購/玩數位/趣旅行3.3%↻→9.17哩（需在正面列表）
+⑤Unicard：百大直刷3.5%→5.25哩；非百大=1%(2.78哩)；LINE Pay繞道=5.25哩
+⑥Richart：各方案3.3%(需切換)→3.9哩（換哩差，建議折帳單）
+⑦匯豐旅人：國內5.56哩(18元)；海外含線上10哩；可換16+家
 
-【強制規則】
-✅ recommendations必須7個，每張卡具體數字「X.XX哩/百元（XX元換1哩）」
-✅ 排除/刷不過→「❌排除：原因」，排除卡才能無哩程數
-✅ 先web_search確認：NCCC/CUBE方案/Unicard百大狀態
+【搜尋規則】只搜尋1次，搜尋後立即整理結果回傳JSON，不再繼續搜尋。
+【CUBE通路】樂饗購：百貨/餐廳/麥當勞/康是美/屈臣氏。集精選：家樂福/全聯/7-11/全家/IKEA。玩數位：蝦皮/momo/PChome/Netflix/ChatGPT。趣旅行：海外實體/航空/旅行社(含鳳凰)/Klook/Agoda/高鐵
+【Unicard百大餐飲】王品/饗賓/瓦城/乾杯/漢來/鼎王/爭鮮（星巴克已刪）；國外實體含日本/韓國/泰國等17國
+【Richart好饗刷】全台餐廳/指定飯店/Uber Eats/foodpanda
 
-【CUBE通路(2026)】樂饗購：百貨30+家/Uber Eats/foodpanda/全台餐廳/麥當勞/康是美/屈臣氏。集精選：家樂福/全聯/7-11/全家/中油/IKEA。玩數位：蝦皮/momo/PChome/Netflix/ChatGPT/Claude。趣旅行：海外實體/20航空/13旅行社(含鳳凰)/Klook/Agoda/高鐵/Uber
-【Unicard百大餐飲限】Uber Eats/foodpanda/EZTABLE/王品瘋Pay/饗賓/瓦城/乾杯/漢來/鼎王/爭鮮（⚠️星巴克已刪）；國外實體17國含日本/韓國/泰國等
-【Richart好饗刷】全台餐廳/指定飯店/Uber Eats/foodpanda/王品瘋Pay
-
-請先web_search「${q} 信用卡 回饋 哩程 2026」，回傳繁體中文JSON（不含代碼塊）：
-{"category":"類別","nccc":false,"cube_plan":"方案名↻","unicard_in_bai_da":false,
+回傳繁體中文JSON（不含代碼塊）：
+{"category":"類別","nccc":false,"cube_plan":"方案↻","unicard_in_bai_da":false,
 "recommendations":[
-{"rank":1,"card":"CUBE卡","payment":"樂饗購↻","reward":"9.17哩/百元","reason":"樂饗購3.3%，需切換"},
-{"rank":2,"card":"星宇世界卡","payment":"直刷","reward":"5哩/百元（20元/哩）","reason":"國內一般消費"},
-{"rank":3,"card":"匯豐旅人","payment":"直刷","reward":"5.56哩/百元（18元/哩）","reason":"無排除條款"},
-{"rank":4,"card":"中信華航","payment":"直刷","reward":"5.56哩/百元（18元/哩）","reason":"確認無排除"},
-{"rank":5,"card":"長榮無限卡","payment":"直刷","reward":"4.55哩/百元（22元/哩）","reason":"國內一般消費"},
-{"rank":6,"card":"Unicard","payment":"LINE Pay","reward":"5.25哩/百元（3.5%）","reason":"非百大需LINE Pay"},
-{"rank":7,"card":"Richart","payment":"好饗刷↻","reward":"3.9哩/百元","reason":"換哩差，建議折帳單"}
-],
-"notes":"但書說明","mall_tip":null}`;
+{"rank":1,"card":"CUBE卡","payment":"樂饗購↻","reward":"9.17哩/百元","reason":"說明"},
+{"rank":2,"card":"星宇世界卡","payment":"直刷","reward":"5哩/百元（20元/哩）","reason":"說明"},
+{"rank":3,"card":"匯豐旅人","payment":"直刷","reward":"5.56哩/百元（18元/哩）","reason":"說明"},
+{"rank":4,"card":"中信華航","payment":"直刷","reward":"5.56哩/百元（18元/哩）","reason":"說明"},
+{"rank":5,"card":"長榮無限卡","payment":"直刷","reward":"4.55哩/百元（22元/哩）","reason":"說明"},
+{"rank":6,"card":"Unicard","payment":"LINE Pay","reward":"5.25哩/百元（3.5%）","reason":"說明"},
+{"rank":7,"card":"Richart","payment":"好饗刷↻","reward":"3.9哩/百元","reason":"說明"}
+],"notes":"但書","mall_tip":null}`;
   const resp=await fetch(apiEndpoint(),{
     method:"POST",
     headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01"},
     body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:700,system:sys,
-      // ⚠️ web_search 已移除：每次搜尋累積 30,000-60,000 tokens，費用 $0.15-0.20/次
-      // system prompt 已內建所有卡片資料，Haiku 直接回答即可
-      messages:[{role:"user",content:`分析「${q}」的刷卡策略，七張卡逐一列出哩程數，回傳JSON`}]})
+      tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+      messages:[{role:"user",content:`搜尋「${q} 信用卡 回饋 2026」，然後列出七張卡哩程數，回傳JSON`}]})
   });
   if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||resp.status);}
   const d=await resp.json();
   const t=d.content?.filter(b=>b.type==="text").map(b=>b.text).join("")||"";
-  // 強健JSON解析：從回應中提取JSON（處理前後有說明文字的情況）
   function extractJSON(t){
     if(!t) return null;
-    // 1. 先嘗試直接解析
     try{ return JSON.parse(t.trim()); } catch{}
-    // 2. 去除code fence後解析
     const stripped = t.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
     try{ return JSON.parse(stripped); } catch{}
-    // 3. 提取第一個 { } 區塊
     const match = t.match(/\{[\s\S]*\}/);
     if(match){ try{ return JSON.parse(match[0]); } catch{} }
     return null;
@@ -696,19 +686,19 @@ async function queryLLM(q){
   }catch{return{category:"AI分析（含即時搜尋）",recommendations:[],notes:t.slice(0,500),mall_tip:null};}
 }
 
-// ─── LIVE PROMO SEARCH (用訓練資料，不搜尋網路) ──────────────
+// ─── LIVE PROMO SEARCH（web搜尋當前促銷，限1次搜尋）────────
 async function liveSearchPromos(merchant){
-  const cards="星宇世界卡、長榮無限卡、中信華航、CUBE卡、Unicard、Richart卡、匯豐旅人";
-  const sys=`台灣信用卡促銷助理。針對「${merchant}」，用訓練資料回答七張卡優惠：${cards}。
-若有特殊限制（如Costco只收富邦卡）請優先說明。不確定的促銷要標注「請至官網確認」。
+  const sys=`台灣信用卡促銷助理。搜尋「${merchant}」最新信用卡優惠，針對七張卡（星宇/長榮/中信華航/CUBE/Unicard/Richart/匯豐旅人）說明有哪些特別回饋。
+只搜尋1次後立即回傳，不確定的促銷要標注「請至官網確認」。
+若有獨家限制（如Costco只收富邦卡）請優先說明。
 回傳繁體中文JSON（不含代碼塊）：
-{"promos":[{"card":"卡名","title":"優惠標題","detail":"細節","source":"建議確認來源"}],"summary":"整體建議","merchant_promo":"官方合作或null"}`;
+{"promos":[{"card":"卡名","title":"優惠標題","detail":"細節","source":"來源"}],"summary":"整體建議","merchant_promo":"官方合作或null"}`;
   const resp=await fetch(apiEndpoint(),{
     method:"POST",
     headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01"},
-    body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:600,
-      system:sys,
-      messages:[{role:"user",content:`「${merchant}」七張卡有哪些特別優惠？`}]})
+    body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:600,system:sys,
+      tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+      messages:[{role:"user",content:`搜尋「${merchant} 信用卡優惠 2026」`}]})
   });
   if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||resp.status);}
   const d=await resp.json();
